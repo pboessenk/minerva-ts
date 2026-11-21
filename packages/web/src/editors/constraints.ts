@@ -1,87 +1,62 @@
 /**
  * Per-attribute validation constraints (the OpenAPI keywords minLength,
- * maximum, minItems, default, ...): which keys apply to which attribute type,
- * and the helpers that keep both model graphs (raw JSON and runtime) in sync.
- * Mirrors constraintScope() in server/constraints.go.
+ * maximum, minItems, default, ...) in the editor.
+ *
+ * Which keys apply to which attribute type is decided in core
+ * (`applicableConstraints`), the same rules the exporters and the save
+ * validator use. This module adapts the editor's attribute objects to those
+ * rules and keeps both model graphs (raw JSON and runtime) in step with them.
  */
-import type { ConstraintKey, Constraints, RawAttr, RtAttr } from './types.ts';
+import {
+  CONSTRAINT_FIELDS,
+  type ConstraintField,
+  type ConstraintSubject,
+  type RawAttribute,
+  applicableConstraints,
+  constraintSummaryParts,
+} from '@minerva/core';
+import type { ApiAttr, AttrConstraints } from '../editor/model-types.ts';
 import { getRawModel } from './model-access.ts';
 
-// Every constraint key, in display order. Values are JSON numbers for the
-// bounds, strings for pattern/default, null when unset.
-export const CONSTRAINT_KEYS: readonly ConstraintKey[] = [
-  'minLength',
-  'maxLength',
-  'pattern',
-  'minimum',
-  'exclusiveMinimum',
-  'maximum',
-  'exclusiveMaximum',
-  'minItems',
-  'maxItems',
-  'default',
-];
+/** Every constraint key, in display order. */
+export { CONSTRAINT_FIELDS };
+
+/**
+ * The fields core's rules read. The runtime attribute calls the codelist
+ * `codelist`; the saved one, and core, call it `siviCodelist`.
+ */
+export function constraintSubject(attr: ApiAttr): ConstraintSubject {
+  return { ...attr, siviCodelist: attr.codelist ?? null };
+}
 
 /**
  * Copy the constraint keys of a raw or runtime attribute object, null when
  * unset. `!= null` on purpose: 0 is a meaningful bound (minimum: 0).
  */
-export function pickConstraints(src: Partial<Constraints> | null | undefined): Constraints {
+export function pickConstraints(src: Partial<AttrConstraints> | null | undefined): AttrConstraints {
   const out: Record<string, unknown> = {};
-  for (const k of CONSTRAINT_KEYS) out[k] = src && src[k] != null ? src[k] : null;
-  return out as unknown as Constraints;
+  for (const k of CONSTRAINT_FIELDS) out[k] = src && src[k] != null ? src[k] : null;
+  return out as unknown as AttrConstraints;
 }
 
-export function emptyConstraints(): Constraints {
+export function emptyConstraints(): AttrConstraints {
   return pickConstraints(null);
 }
 
-/** Type facts every applicability rule below is built from. */
-export function _constraintTypeInfo(attr: RtAttr) {
-  const t = attr.type || '';
-  const isArray = /\[\]$/.test(t);
-  const base = t.replace(/\[\]$/, '').toLowerCase();
-  // Codelist / allowed-values attributes export as $ref schemas where
-  // element keywords and defaults would be silently dropped.
-  const isNamed = (attr.allowedValues && attr.allowedValues.length > 0) || !!attr.codelist;
-  return {
-    isArray,
-    base,
-    isNamed,
-    isString: base === 'string' && !isNamed,
-    isNumeric: ['number', 'integer', 'int'].includes(base) && !isNamed,
-    isInteger: base === 'integer' || base === 'int',
-    isBoolean: base === 'boolean',
-  };
-}
-
-/**
- * Constraint keys that apply to a runtime attribute: lengths + pattern for
- * plain strings, value bounds for numerics, item bounds for any array, and
- * a default for optional scalar primitives only (a default on a required
- * property never takes effect).
- */
-export function constraintsForAttr(attr: RtAttr): ConstraintKey[] {
-  const ti = _constraintTypeInfo(attr);
-  const keys: ConstraintKey[] = [];
-  if (ti.isString) keys.push('minLength', 'maxLength', 'pattern');
-  if (ti.isNumeric) keys.push('minimum', 'exclusiveMinimum', 'maximum', 'exclusiveMaximum');
-  if (ti.isArray) keys.push('minItems', 'maxItems');
-  if (!ti.isArray && !ti.isNamed && !attr.required && (ti.isString || ti.isNumeric || ti.isBoolean)) {
-    keys.push('default');
-  }
-  return keys;
+/** Constraint keys that apply to a runtime attribute, in display order. */
+export function constraintsForAttr(attr: ApiAttr): ConstraintField[] {
+  return applicableConstraints(constraintSubject(attr));
 }
 
 /**
  * Null out constraints the attribute can no longer carry, on both the raw
  * JSON object and the runtime object. Returns whether anything changed.
  */
-export function pruneConstraints(rawAttr: RawAttr | null | undefined, rtAttr: RtAttr | null | undefined): boolean {
+export function pruneConstraints(rawAttr: RawAttribute | null | undefined, rtAttr: ApiAttr | null | undefined): boolean {
   if (!rtAttr) return false;
   const keep = new Set(constraintsForAttr(rtAttr));
   let changed = false;
-  for (const k of CONSTRAINT_KEYS) {
+  for (const k of CONSTRAINT_FIELDS) {
     if (keep.has(k)) continue;
     for (const obj of [rawAttr, rtAttr]) {
       if (obj && obj[k] != null) {
@@ -94,7 +69,7 @@ export function pruneConstraints(rawAttr: RawAttr | null | undefined, rtAttr: Rt
 }
 
 /** The raw JSON attribute object (the one that is saved) of an entity attribute. */
-export function findRawAttr(entityName: string, attrName: string): RawAttr | null {
+export function findRawAttr(entityName: string, attrName: string): RawAttribute | null {
   const model = getRawModel()!;
   const entity = model && model.entities && model.entities[entityName];
   if (!entity) return null;
@@ -105,11 +80,7 @@ export function findRawAttr(entityName: string, attrName: string): RawAttr | nul
   return null;
 }
 
-/** Set, applicable constraints as "key: value" lines (tooltips, filter text). */
-export function constraintSummary(attr: RtAttr): string[] {
-  const lines: string[] = [];
-  for (const k of constraintsForAttr(attr)) {
-    if (attr[k] != null && attr[k] !== '') lines.push(k + ': ' + attr[k]);
-  }
-  return lines;
+/** Set, applicable constraints as "key: value" lines (tooltips, filter text), as the exports write them. */
+export function constraintSummary(attr: ApiAttr): string[] {
+  return constraintSummaryParts(constraintSubject(attr));
 }

@@ -3,8 +3,16 @@ import { sortedKeys } from '../text/compare.ts';
 import { quote } from '../text/escape.ts';
 import { formatFloat, parseFloatText, parseIntText } from '../text/number.ts';
 import { runeCount, trimSpace } from '../text/strings.ts';
-import { attributeBase, constraintScope, isIntegerBase, isNumericBase } from './constraints.ts';
-import type { Attribute, Model } from './types.ts';
+import {
+  type ConstraintSubject,
+  type ResolvedConstraints,
+  attributeBase,
+  constraintScope,
+  isIntegerBase,
+  isNumericBase,
+  resolveConstraints,
+} from './constraints.ts';
+import type { Model } from './types.ts';
 
 /**
  * Save-time validation.
@@ -35,9 +43,14 @@ export function validateModel(model: Model): string[] {
   return errors;
 }
 
-export function validateAttributeConstraints(a: Attribute): string[] {
+/**
+ * The constraint problems of one attribute. The editor's rules dialog shows
+ * these too, so the dialog and the save agree.
+ */
+export function validateAttributeConstraints(subject: ConstraintSubject): string[] {
   const errors: string[] = [];
-  const scope = constraintScope(a);
+  const scope = constraintScope(subject);
+  const a = resolveConstraints(subject);
   const { base } = attributeBase(a.type);
   const hasDefault = trimSpace(a.default) !== '';
 
@@ -76,7 +89,7 @@ function checkCountPair(minKey: string, min: number | null, maxKey: string, max:
  * Numeric bounds: at most one of each inclusive/exclusive pair, a non-empty
  * range, and whole numbers on integer attributes.
  */
-function checkBounds(a: Attribute, integral: boolean): string[] {
+function checkBounds(a: ResolvedConstraints, integral: boolean): string[] {
   const errors: string[] = [];
   if (a.minimum !== null && a.exclusiveMinimum !== null) {
     errors.push('minimum and exclusiveMinimum are mutually exclusive');
@@ -111,7 +124,7 @@ function checkBounds(a: Attribute, integral: boolean): string[] {
 }
 
 /** The default must parse as the attribute's type and satisfy its own constraints. */
-function checkDefault(a: Attribute, base: string): string[] {
+function checkDefault(a: ResolvedConstraints, base: string): string[] {
   const value = trimSpace(a.default);
   if (isIntegerBase(base)) {
     const parsed = parseIntText(value);
@@ -138,7 +151,7 @@ function checkDefault(a: Attribute, base: string): string[] {
   return errors;
 }
 
-function checkDefaultInRange(a: Attribute, value: number): string[] {
+function checkDefaultInRange(a: ResolvedConstraints, value: number): string[] {
   const errors: string[] = [];
   const shown = formatFloat(value);
   if (a.minimum !== null && value < a.minimum) {

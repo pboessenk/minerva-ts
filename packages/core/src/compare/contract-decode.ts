@@ -1,6 +1,5 @@
 import { type JsonNode, JsonSyntaxError, parseJson } from '../json/parse.ts';
 import { equalFold } from '../text/case.ts';
-import { quote } from '../text/escape.ts';
 import type { LooseValue } from './value-text.ts';
 
 /**
@@ -18,7 +17,7 @@ import type { LooseValue } from './value-text.ts';
  *    list takes the new length), maps keep their entries. Map entries and
  *    loose values are replaced, not merged.
  *  - A value of the wrong type is skipped and decoding goes on; the first
- *    such problem is reported, in the wording of `typeErrorMessage`.
+ *    such problem is reported (see `typeErrorMessage`).
  *  - A syntax error anywhere wins over type errors.
  */
 
@@ -100,18 +99,17 @@ export class ContractDecodeError extends Error {
 // ── Decoding machinery ──
 
 class DecodeState {
-  /** Name of the root type, or empty for an unnamed one (a list). */
-  readonly root: string;
-  readonly path: string[] = [];
+  /** JSON Pointer tokens from the document root to the value being decoded. */
+  readonly path: string[];
   error: string | undefined;
 
-  constructor(root: string) {
-    this.root = root;
+  constructor(base: readonly string[] = []) {
+    this.path = [...base];
   }
 
   /** Records a value that does not fit its target, unless an earlier problem was recorded. */
-  fail(value: string, typeName: string): void {
-    this.error ??= typeErrorMessage(value, typeName, this.root, this.path);
+  fail(found: string, expected: string): void {
+    this.error ??= typeErrorMessage(found, expected, this.path);
   }
 }
 
@@ -121,26 +119,16 @@ function pointerToken(token: string): string {
 }
 
 /**
- * The text of a type error: `json: cannot unmarshal number into Go struct
- * field oaDocument.info.title of type string`. The location is the path of
- * member names and indices from the root, dot-separated; when it ends in an
- * index the words "Go struct field" are left out.
+ * The text of a type error, located by JSON Pointer from the document root:
+ * `#/components/schemas/Pet/minLength: expected number, found string`.
  */
-export function typeErrorMessage(value: string, typeName: string, root: string, path: readonly string[]): string {
-  if (path.length === 0) return `json: cannot unmarshal ${value} into Go value of type ${typeName}`;
-  const field = path.map(pointerToken).join('.');
-  const last = field.slice(field.lastIndexOf('.') + 1);
-  const intoWhat = last !== '' && /^[0-9]+$/.test(last) ? '' : 'Go struct field ';
-  return `json: cannot unmarshal ${value} into ${intoWhat}${root}.${field} of type ${typeName}`;
+export function typeErrorMessage(found: string, expected: string, path: readonly string[]): string {
+  const where = '#' + path.map((token) => '/' + pointerToken(token)).join('');
+  return `${where}: expected ${expected}, found ${found}`;
 }
 
 function kindWord(node: JsonNode): string {
-  switch (node.kind) {
-    case 'boolean':
-      return 'bool';
-    default:
-      return node.kind;
-  }
+  return node.kind === 'number' ? `number ${node.text}` : node.kind;
 }
 
 /** Decodes `node` into `current` (the field's present value) and returns the new value. */
@@ -163,21 +151,21 @@ const decodeString: Decode<string> = (node, current, st) => {
 
 const decodeBool: Decode<boolean> = (node, current, st) => {
   if (node.kind === 'boolean') return node.value;
-  if (node.kind !== 'null') st.fail(kindWord(node), 'bool');
+  if (node.kind !== 'null') st.fail(kindWord(node), 'boolean');
   return current;
 };
 
 function parseNumber(node: Extract<JsonNode, { kind: 'number' }>, st: DecodeState): number {
   const value = Number(node.text);
-  if (!Number.isFinite(value)) st.fail('number ' + node.text, 'float64');
+  if (!Number.isFinite(value)) st.fail(kindWord(node), 'a finite number');
   return value;
 }
 
-/** An optional float (`*float64`). */
+/** An optional number. */
 const decodeFloat: Decode<number | null> = (node, current, st) => {
   if (node.kind === 'null') return null;
   if (node.kind === 'number') return parseNumber(node, st);
-  st.fail(kindWord(node), 'float64');
+  st.fail(kindWord(node), 'number');
   return current ?? 0;
 };
 
@@ -212,11 +200,11 @@ function pointer<T>(elem: Decode<T>, zero: () => T): Decode<T | null> {
   return (node, current, st) => (node.kind === 'null' ? null : elem(node, current ?? zero(), st));
 }
 
-function list<T>(elem: Decode<T>, zero: () => T, typeName: string): Decode<T[] | null> {
+function list<T>(elem: Decode<T>, zero: () => T): Decode<T[] | null> {
   return (node, current, st) => {
     if (node.kind === 'null') return null;
     if (node.kind !== 'array') {
-      st.fail(kindWord(node), typeName);
+      st.fail(kindWord(node), 'array');
       return current;
     }
     return node.items.map((item, i) =>
@@ -225,11 +213,11 @@ function list<T>(elem: Decode<T>, zero: () => T, typeName: string): Decode<T[] |
   };
 }
 
-function map<T>(elem: Decode<T>, zero: () => T, typeName: string): Decode<Map<string, T> | null> {
+function map<T>(elem: Decode<T>, zero: () => T): Decode<Map<string, T> | null> {
   return (node, current, st) => {
     if (node.kind === 'null') return null;
     if (node.kind !== 'object') {
-      st.fail(kindWord(node), typeName);
+      st.fail(kindWord(node), 'object');
       return current;
     }
     const out = current ?? new Map<string, T>();
@@ -245,12 +233,12 @@ function map<T>(elem: Decode<T>, zero: () => T, typeName: string): Decode<Map<st
 type Fields<T> = { readonly [K in keyof T]: readonly [jsonName: string, decode: Decode<T[K]>] };
 
 /** A struct: members are matched to fields by name and decoded into the current value. */
-function struct<T extends object>(typeName: string, fields: () => Fields<T>): Decode<T> {
+function struct<T extends object>(fields: () => Fields<T>): Decode<T> {
   let entries: [keyof T, string, Decode<unknown>][] | undefined;
   return (node, current, st) => {
     if (node.kind === 'null') return current;
     if (node.kind !== 'object') {
-      st.fail(kindWord(node), typeName);
+      st.fail(kindWord(node), 'object');
       return current;
     }
     entries ??= (Object.entries(fields()) as [string, readonly [string, Decode<unknown>]][]).map(([key, [jsonName, decode]]) => [
@@ -270,10 +258,6 @@ function struct<T extends object>(typeName: string, fields: () => Fields<T>): De
 }
 
 // ── The OpenAPI structures ──
-
-const SCHEMA = 'main.oaSchema';
-const SCHEMA_MAP = 'map[string]*main.oaSchema';
-const SCHEMA_LIST = '[]*main.oaSchema';
 
 export function emptySchema(): OaSchema {
   return {
@@ -306,7 +290,7 @@ export function emptySchema(): OaSchema {
   };
 }
 
-const schemaStruct: Decode<OaSchema> = struct<OaSchema>(SCHEMA, () => ({
+const schemaStruct: Decode<OaSchema> = struct<OaSchema>(() => ({
   ref: ['$ref', decodeString],
   type: ['type', decodeLoose],
   format: ['format', decodeString],
@@ -321,9 +305,9 @@ const schemaStruct: Decode<OaSchema> = struct<OaSchema>(SCHEMA, () => ({
   maxItems: ['maxItems', decodeFloat],
   default: ['default', decodeLoose],
   properties: ['properties', schemaMap],
-  required: ['required', list(decodeString, () => '', '[]string')],
+  required: ['required', list(decodeString, () => '')],
   items: ['items', schemaPointer],
-  enum: ['enum', list(decodeLoose, () => null, '[]interface {}')],
+  enum: ['enum', list(decodeLoose, () => null)],
   const: ['const', decodeLoose],
   allOf: ['allOf', schemaList],
   anyOf: ['anyOf', schemaList],
@@ -335,7 +319,7 @@ const schemaStruct: Decode<OaSchema> = struct<OaSchema>(SCHEMA, () => ({
   discriminator: [
     'discriminator',
     pointer(
-      struct<{ propertyName: string }>('main.oaDiscriminator', () => ({ propertyName: ['propertyName', decodeString] })),
+      struct<{ propertyName: string }>(() => ({ propertyName: ['propertyName', decodeString] })),
       () => ({
         propertyName: '',
       }),
@@ -344,17 +328,14 @@ const schemaStruct: Decode<OaSchema> = struct<OaSchema>(SCHEMA, () => ({
 }));
 
 const schemaPointer: Decode<OaSchema | null> = pointer(schemaStruct, emptySchema);
-const schemaMap = map(schemaPointer, () => null, SCHEMA_MAP);
-const schemaList = list(schemaPointer, () => null, SCHEMA_LIST);
-
-const INFO_TYPE = 'struct { Title string "json:\\"title\\""; Version string "json:\\"version\\"" }';
-const COMPONENTS_TYPE = 'struct { Schemas map[string]*main.oaSchema "json:\\"schemas\\"" }';
+const schemaMap = map(schemaPointer, () => null);
+const schemaList = list(schemaPointer, () => null);
 
 /** A path item: member name -> raw value, decoded per operation later. */
 const pathItem: Decode<Map<string, JsonNode> | null> = (node, current, st) => {
   if (node.kind === 'null') return null;
   if (node.kind !== 'object') {
-    st.fail(kindWord(node), 'map[string]jsontext.Value');
+    st.fail(kindWord(node), 'object');
     return current;
   }
   const out = current ?? new Map<string, JsonNode>();
@@ -362,85 +343,52 @@ const pathItem: Decode<Map<string, JsonNode> | null> = (node, current, st) => {
   return out;
 };
 
-const documentStruct = struct<OaDocument>('main.oaDocument', () => ({
+const documentStruct = struct<OaDocument>(() => ({
   openapi: ['openapi', decodeString],
-  info: ['info', struct<OaDocument['info']>(INFO_TYPE, () => ({ title: ['title', decodeString], version: ['version', decodeString] }))],
-  paths: ['paths', map(pathItem, () => null, 'map[string]map[string]jsontext.Value')],
-  components: ['components', struct<OaDocument['components']>(COMPONENTS_TYPE, () => ({ schemas: ['schemas', schemaMap] }))],
+  info: ['info', struct<OaDocument['info']>(() => ({ title: ['title', decodeString], version: ['version', decodeString] }))],
+  paths: ['paths', map(pathItem, () => null)],
+  components: ['components', struct<OaDocument['components']>(() => ({ schemas: ['schemas', schemaMap] }))],
 }));
 
 const emptyParameter = (): OaParameter => ({ name: '', in: '', required: false, schema: null });
 
-const parameterStruct = struct<OaParameter>('main.oaParameter', () => ({
+const parameterStruct = struct<OaParameter>(() => ({
   name: ['name', decodeString],
   in: ['in', decodeString],
   required: ['required', decodeBool],
   schema: ['schema', schemaPointer],
 }));
 
-const mediaStruct = struct<OaMedia>('main.oaMedia', () => ({ schema: ['schema', schemaPointer] }));
-const contentMap = map(mediaStruct, (): OaMedia => ({ schema: null }), 'map[string]main.oaMedia');
+const mediaStruct = struct<OaMedia>(() => ({ schema: ['schema', schemaPointer] }));
+const contentMap = map(mediaStruct, (): OaMedia => ({ schema: null }));
 
-const operationStruct = struct<OaOperation>('main.oaOperation', () => ({
+const operationStruct = struct<OaOperation>(() => ({
   operationId: ['operationId', decodeString],
-  tags: ['tags', list(decodeString, () => '', '[]string')],
-  parameters: ['parameters', list(parameterStruct, emptyParameter, '[]main.oaParameter')],
+  tags: ['tags', list(decodeString, () => '')],
+  parameters: ['parameters', list(parameterStruct, emptyParameter)],
   requestBody: [
     'requestBody',
     pointer(
-      struct<OaRequestBody>('main.oaRequestBody', () => ({ required: ['required', decodeBool], content: ['content', contentMap] })),
+      struct<OaRequestBody>(() => ({ required: ['required', decodeBool], content: ['content', contentMap] })),
       (): OaRequestBody => ({ required: false, content: null }),
     ),
   ],
   responses: [
     'responses',
     map(
-      struct<OaResponse>('main.oaResponse', () => ({ description: ['description', decodeString], content: ['content', contentMap] })),
+      struct<OaResponse>(() => ({ description: ['description', decodeString], content: ['content', contentMap] })),
       (): OaResponse => ({ description: '', content: null }),
-      'map[string]main.oaResponse',
     ),
   ],
 }));
 
 // ── Entry points ──
 
-/** Go's rendering of a character in a syntax error: `'x'`, `'\''`, `'\t'`. */
-function quoteChar(ch: string): string {
-  if (ch === "'") return "'\\''";
-  if (ch === '"') return `'"'`;
-  return "'" + quote(ch).slice(1, -1) + "'";
-}
-
-/**
- * Rewords a syntax error of the shared parser into the wording the drift
- * report uses. Position and cause are unchanged.
- */
-function syntaxMessage(err: JsonSyntaxError, text: string): string {
-  let message = err.message.replace(
-    /^invalid character "((?:[^"\\]|\\.)+)"/,
-    (_, literal: string) => 'invalid character ' + quoteChar(JSON.parse(`"${literal}"`) as string),
-  );
-  message = message.replace(
-    /\(expecting "((?:[^"\\]|\\.)+)"\)/,
-    (_, literal: string) => '(expecting ' + quoteChar(JSON.parse(`"${literal}"`) as string) + ')',
-  );
-  if (message.endsWith(' in string escape code')) {
-    return 'invalid escape sequence `' + text.slice(err.offset - 1, err.offset + 1) + '` in string';
-  }
-  if (message.endsWith(' in \\u hexadecimal character escape')) {
-    return 'invalid escape sequence `' + text.slice(err.offset - 2, err.offset + 4) + '` in string';
-  }
-  return message
-    .replace(/ in string literal$/, ' in string')
-    .replace(/ after decimal point in numeric literal$/, ' in numeric literal')
-    .replace(/ in exponent of numeric literal$/, ' in numeric literal');
-}
-
 function parse(text: string): JsonNode {
   try {
     return parseJson(text);
   } catch (err) {
-    if (err instanceof JsonSyntaxError) throw new ContractDecodeError(syntaxMessage(err, text));
+    if (err instanceof JsonSyntaxError) throw new ContractDecodeError(err.message);
     throw err;
   }
 }
@@ -452,7 +400,7 @@ function parse(text: string): JsonNode {
  */
 export function parseOpenApiDocument(text: string): OaDocument {
   const node = parse(text);
-  const st = new DecodeState('oaDocument');
+  const st = new DecodeState();
   const doc = documentStruct(node, { openapi: '', info: { title: '', version: '' }, paths: null, components: { schemas: null } }, st);
   if (st.error !== undefined) throw new ContractDecodeError(st.error);
   if (doc.openapi === '' && doc.paths === null && doc.components.schemas === null) {
@@ -461,9 +409,13 @@ export function parseOpenApiDocument(text: string): OaDocument {
   return doc;
 }
 
-/** Decodes one operation of a path item. Returns the error text instead when a value has the wrong type. */
-export function decodeOperation(node: JsonNode): OaOperation | string {
-  const st = new DecodeState('oaOperation');
+/**
+ * Decodes one operation of a path item; `location` is its JSON Pointer
+ * tokens (`['paths', '/pets', 'get']`), used in the error text. Returns the
+ * error text instead when a value has the wrong type.
+ */
+export function decodeOperation(node: JsonNode, location: readonly string[]): OaOperation | string {
+  const st = new DecodeState(location);
   const op = operationStruct(node, { operationId: '', tags: null, parameters: null, requestBody: null, responses: null }, st);
   return st.error ?? op;
 }
@@ -473,6 +425,6 @@ export function decodeOperation(node: JsonNode): OaOperation | string {
  * the wrong type are skipped; whatever could be decoded is returned.
  */
 export function decodeSharedParameters(node: JsonNode): OaParameter[] {
-  const st = new DecodeState('');
-  return list(parameterStruct, emptyParameter, '[]main.oaParameter')(node, null, st) ?? [];
+  const st = new DecodeState();
+  return list(parameterStruct, emptyParameter)(node, null, st) ?? [];
 }

@@ -9,7 +9,7 @@
  * releases[] is ordered newest-first.
  */
 import { showGeneralView } from './general.ts';
-import type { Changelog, ChangelogEntry, ChangelogRelease, RawModel } from './model-types.ts';
+import type { RawChangelog, RawChangelogEntry, RawChangelogRelease, RawModel } from '@minerva/core';
 import { state } from './state.ts';
 import { editorSave, updateToolbarInfo } from './toolbar.ts';
 import { escapeHtml, showToast } from '../base/ui.ts';
@@ -44,7 +44,7 @@ function localISODate(): string {
 
 // Lazily create the changelog block. Only call from mutation paths so
 // untouched models don't gain a noise key on unrelated saves.
-function ensureChangelog(m: RawModel): Changelog {
+function ensureChangelog(m: RawModel): RawChangelog {
   if (!m.changelog) m.changelog = { open: [], releases: [] };
   if (!m.changelog.open) m.changelog.open = [];
   if (!m.changelog.releases) m.changelog.releases = [];
@@ -54,7 +54,7 @@ function ensureChangelog(m: RawModel): Changelog {
 // Markdown for a set of entries: "### Added" sections with "- item"
 // bullets, in fixed category order; unknown categories get their own
 // trailing sections in insertion order.
-function entriesMarkdown(entries: ChangelogEntry[] | undefined): string {
+function entriesMarkdown(entries: RawChangelogEntry[] | undefined): string {
   const byCat = new Map<string, string[]>();
   for (const e of entries || []) {
     let bullets = byCat.get(e.category);
@@ -84,11 +84,11 @@ function categoryBadge(category: string): string {
   return `<span class="ca-cl-badge${cls}">${escapeHtml(label)}</span>`;
 }
 
-function renderRelease(r: ChangelogRelease, i: number): string {
+function renderRelease(r: RawChangelogRelease, i: number): string {
   const entries = r.entries || [];
   // Group entries by category in fixed order; unknown categories keep
   // their original order at the end.
-  const ordered: ChangelogEntry[] = [];
+  const ordered: RawChangelogEntry[] = [];
   for (const cat of CHANGELOG_CATEGORIES) {
     for (const e of entries) if (e.category === cat) ordered.push(e);
   }
@@ -152,7 +152,7 @@ export function renderChangelogPane(container: HTMLElement | null): void {
   // In-place edits write straight into the model without re-render
   // (prevents focus loss), same pattern as the General servers list.
   const rowsEl = container.querySelector('#clOpenRows') as HTMLElement;
-  const entryAt = (target: HTMLElement): ChangelogEntry | undefined => {
+  const entryAt = (target: HTMLElement): RawChangelogEntry | undefined => {
     const row = target.closest<HTMLElement>('.ca-cl-row');
     const m2 = getModel();
     const entries = (m2 && m2.changelog && m2.changelog.open) || [];
@@ -404,7 +404,7 @@ export async function performBump(major: number, minor: number, patch: number): 
 
 /* ── Unlock dialog ── */
 
-function sameVersion(a: string, b: string | undefined): boolean {
+function sameVersion(a: string, b: string | null | undefined): boolean {
   const pa = parseVersion(a),
     pb = parseVersion(b);
   return pa.major === pb.major && pa.minor === pb.minor && pa.patch === pb.patch;
@@ -418,12 +418,12 @@ export function openUnlockDialog(): void {
   }
   const releases = (m.changelog && m.changelog.releases) || [];
   if (!releases.length) return;
-  const release = releases[0] as ChangelogRelease;
+  const release = releases[0] as RawChangelogRelease;
   const open = (m.changelog && m.changelog.open) || [];
 
   const count = (release.entries || []).length;
   const versionMatches = sameVersion(release.version, m.version);
-  const revertTo = releases.length > 1 ? (releases[1] as ChangelogRelease).version : '0.0.0';
+  const revertTo = releases.length > 1 ? (releases[1] as RawChangelogRelease).version : '0.0.0';
 
   const versionLine = versionMatches
     ? `Version: <span>${escapeHtml(m.version || '(none)')}</span> → <span>${escapeHtml(revertTo)}</span>`
@@ -475,7 +475,7 @@ export async function performUnlock(): Promise<void> {
   const m = getModel();
   if (!m || !m.changelog || !(m.changelog.releases || []).length) return;
   const cl = ensureChangelog(m);
-  const release = cl.releases.shift() as ChangelogRelease;
+  const release = cl.releases.shift() as RawChangelogRelease;
 
   cl.open = (release.entries || []).concat(cl.open);
 

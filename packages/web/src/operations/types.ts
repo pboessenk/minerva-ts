@@ -1,85 +1,18 @@
-/** Shapes of the runtime model data the operation and example editors work on. */
-
-/** A JSON object as stored in an example body. */
+/**
+ * Shapes the operation and example editors add to the model: example bodies,
+ * the catalogue data they read and the form helpers' own types. The model
+ * itself is not restated here: the runtime shapes (`ApiAttr`, `ApiEntity`,
+ * `ApiOperation`, `ApiExample`, ...) live in `editor/model-types.ts` and the
+ * raw file shapes in `@minerva/core` (`model/file.ts`).
+ */
+/** A JSON object as stored in an example body. Values are loose: the form code reads them by attribute type. */
 export type JsonObject = { [key: string]: unknown };
 
 /** Maps a dot-path inside an example body to the attribute type it was written with. */
 export type TypeMap = Record<string, string>;
 
-/** Stored request or response body of an example (an array for array bodies). */
+/** Stored request or response body of an example: an object, an array of objects for array bodies, or null; the file allows any JSON. */
 export type ExampleBody = JsonObject | JsonObject[] | null;
-
-export interface ApiAttr {
-  name: string;
-  type: string;
-  format?: string | null;
-  required?: boolean;
-  sivi?: string | null;
-  codelist?: string | null;
-  description?: string | null;
-  example?: unknown;
-  note?: string | null;
-  allowedValues?: string[] | null;
-  allowedName?: string | null;
-  applicableSubtypes?: string[] | null;
-  /** Constraint keys (minLength, pattern, ...) are read by name, see constraintsForAttr. */
-  [key: string]: unknown;
-}
-
-export interface ApiEntity {
-  attrs: ApiAttr[];
-  [key: string]: unknown;
-}
-
-export interface ApiEnumValue {
-  codeName?: string;
-  name?: string;
-  value: string;
-  note?: string | null;
-}
-
-export interface ApiEnum {
-  values?: ApiEnumValue[];
-  [key: string]: unknown;
-}
-
-export interface ApiParam {
-  name: string;
-  in: string;
-  type: string;
-  required?: boolean;
-  description?: string;
-}
-
-export interface ApiResponse {
-  description?: string;
-  schema?: string;
-  responseBodyArray?: boolean;
-}
-
-export interface ApiOp {
-  id: string;
-  method: string;
-  path: string;
-  summary: string;
-  description: string;
-  tags: string[];
-  requestBody: string | null;
-  requestBodyArray?: boolean;
-  parameters?: ApiParam[];
-  responses: Record<string, ApiResponse>;
-}
-
-export interface ApiExample {
-  id: string;
-  operationId: string;
-  technicalName: string;
-  summary: string;
-  parameterValues?: Record<string, string>;
-  request: ExampleBody;
-  response: ExampleBody;
-  responseCode: string;
-}
 
 export interface CodelistCode {
   CodeValue?: string;
@@ -101,8 +34,8 @@ export interface EntityTypeEntry {
   [key: string]: unknown;
 }
 
-/** Applicable, set constraints of an attribute. */
-export interface Constraints {
+/** The applicable constraints an attribute has set, as stamped on a form control for the violation scanner. */
+export interface SetConstraints {
   minLength?: number;
   maxLength?: number;
   pattern?: string;

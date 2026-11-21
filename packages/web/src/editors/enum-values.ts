@@ -85,13 +85,14 @@ export function addEnumValue(enumName: string): void {
       showToast('Name must be PascalCase (e.g. OrderHandler)', 'error');
       return;
     }
-    if (rawEnum.values.some((v) => v.value === val)) {
+    if ((rawEnum.values ?? []).some((v) => v.value === val)) {
       showToast('Value "' + val + '" already exists', 'error');
       return;
     }
     const caption = captionInput.value.trim() || _splitPascal(codeName);
     const comment = commentInput.value.trim();
 
+    rawEnum.values = rawEnum.values ?? [];
     rawEnum.values.push({ name: codeName, value: val, label: caption, description: comment });
     rtEnum.values.push({ codeName: codeName, name: caption, value: val, note: comment || null });
 
@@ -138,7 +139,7 @@ export function deleteEnumValue(enumName: string, valueStr: string): void {
   const rtEnum = state.apiEnums![enumName];
   if (!rawEnum || !rtEnum) return;
 
-  rawEnum.values = rawEnum.values.filter((v) => v.value !== valueStr);
+  rawEnum.values = (rawEnum.values ?? []).filter((v) => v.value !== valueStr);
   rtEnum.values = rtEnum.values.filter((v) => v.value !== valueStr);
 
   // Cascade: drop the value from any attribute's allowedValues list
@@ -200,7 +201,7 @@ export function makeEnumValueEditable(el: HTMLElement, enumName: string, oldValu
   const rtEnum = state.apiEnums![enumName];
   if (!rawEnum || !rtEnum) return;
 
-  const rawVal = rawEnum.values.find((v) => v.value === oldValue);
+  const rawVal = (rawEnum.values ?? []).find((v) => v.value === oldValue);
   const rtVal = rtEnum.values.find((v) => v.value === oldValue);
   if (!rawVal || !rtVal) return;
 
@@ -231,7 +232,7 @@ export function makeEnumValueEditable(el: HTMLElement, enumName: string, oldValu
       rtVal.codeName = val;
       if (val && valueWasDerived) {
         const newValue = _toSnakeCase(val);
-        if (newValue && !rawEnum.values.some((v) => v !== rawVal && v.value === newValue)) {
+        if (newValue && !(rawEnum.values ?? []).some((v) => v !== rawVal && v.value === newValue)) {
           const prevValue = rawVal.value;
           rawVal.value = newValue;
           rtVal.value = newValue;

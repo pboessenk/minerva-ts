@@ -1,5 +1,5 @@
 /** Nested entities and entity arrays, including the optional (checkbox-gated) sections. */
-import type { ApiAttr } from '../types.ts';
+import type { ApiAttr } from '../../editor/model-types.ts';
 import { depthClass } from './type-info.ts';
 import { stampConstraints } from './constraints.ts';
 import { buildEntityForm } from './build.ts';

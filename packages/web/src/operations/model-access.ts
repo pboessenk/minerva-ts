@@ -1,34 +1,34 @@
 /**
- * Typed access to the shared runtime model. The editor state and the
- * codelist loader keep it with their own (wider) types; the operation and
- * example modules read it through these accessors with the narrower shapes of ./types.ts.
+ * Typed access to the shared runtime model (`editor/model-types.ts`) and to
+ * the catalogue data the codelist loader keeps, with the shapes of ./types.ts.
  */
 import { codelistMap, entityTypeData } from '../base/model-loader.ts';
-import type { ApiEntity, ApiEnum, ApiExample, ApiOp, CodelistEntry, EntityTypeEntry } from './types.ts';
+import type { CodelistEntry, EntityTypeEntry } from './types.ts';
+import type { ApiEntity, ApiEnum, ApiExample, ApiOperation } from '../editor/model-types.ts';
 import { state } from '../editor/state.ts';
 
 export function getEntities(): Record<string, ApiEntity> | null {
-  return state.apiModel as unknown as Record<string, ApiEntity> | null;
+  return state.apiModel;
 }
 
 export function getEnums(): Record<string, ApiEnum> | null {
-  return state.apiEnums as unknown as Record<string, ApiEnum> | null;
+  return state.apiEnums;
 }
 
-export function getOps(): ApiOp[] | null {
-  return state.apiOps as unknown as ApiOp[] | null;
+export function getOps(): ApiOperation[] | null {
+  return state.apiOps;
 }
 
-export function setOps(ops: ApiOp[] | null): void {
-  state.apiOps = ops as unknown as typeof state.apiOps;
+export function setOps(ops: ApiOperation[] | null): void {
+  state.apiOps = ops;
 }
 
 export function getExamples(): ApiExample[] | null {
-  return state.apiExamples as unknown as ApiExample[] | null;
+  return state.apiExamples;
 }
 
 export function setExamples(examples: ApiExample[] | null): void {
-  state.apiExamples = examples as unknown as typeof state.apiExamples;
+  state.apiExamples = examples;
 }
 
 export function getCodelistMap(): Record<string, CodelistEntry> {

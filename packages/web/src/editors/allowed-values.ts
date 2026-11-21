@@ -2,7 +2,9 @@
  * Allowed-values picker: restrict an attribute backed by a codelist, a SIVI
  * entityType or an enum to a subset of its values, and name that subset.
  */
-import type { RawAttr, RtAttr, SourceValue } from './types.ts';
+import type { SourceValue } from './allowed-values-import.ts';
+import type { RawAttribute } from '@minerva/core';
+import type { ApiAttr } from '../editor/model-types.ts';
 import { findRawAttr, pruneConstraints } from './constraints.ts';
 import { _applySubtypeChanges, _diffSubtypes, _effectiveSubtypes } from './subtype-changes.ts';
 import { _openAllowedValuesImport } from './allowed-values-import.ts';
@@ -17,7 +19,7 @@ import { state } from '../editor/state.ts';
  * Resolve the full list of source values for an attribute.
  * Returns array of { code: string, desc: string }.
  */
-async function _resolveSourceValues(attr: RtAttr): Promise<SourceValue[]> {
+async function _resolveSourceValues(attr: ApiAttr): Promise<SourceValue[]> {
   if (attr.codelist) {
     // Codelist source
     if (!codelistList() || codelistList()!.length === 0) {
@@ -247,7 +249,7 @@ export async function makeAllowedValuesPicker(_cell: HTMLElement, entityName: st
     const entity = model.entities[entityName];
     if (entity) {
       for (const sec of entity.sections || []) {
-        const rawAttr: RawAttr | undefined = (sec.attributes || []).find((a) => a.name === attrName);
+        const rawAttr: RawAttribute | undefined = (sec.attributes || []).find((a) => a.name === attrName);
         if (rawAttr) {
           rawAttr.allowedValues = newAllowedValues;
           rawAttr.allowedName = newAllowedName;

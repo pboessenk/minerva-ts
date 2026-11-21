@@ -1,5 +1,6 @@
 /** Entity form builder: walks an entity's attributes and renders one control per attribute. */
-import type { ApiAttr, ApiEntity, JsonObject, TypeInfo } from '../types.ts';
+import type { JsonObject, TypeInfo } from '../types.ts';
+import type { ApiAttr, ApiEntity } from '../../editor/model-types.ts';
 import { FORM_MAX_DEPTH, formTypeInfo } from './type-info.ts';
 import {
   buildEnumArrayField,

@@ -2,7 +2,7 @@
  * Typed access to the shared runtime model and reference data, in the
  * narrower shapes the editors need.
  */
-import type { RawModel } from './types.ts';
+import type { RawModel } from '@minerva/core';
 import { datacatEntities } from '../base/datacat.ts';
 import { codelistData, codelistMap, entityTypeData } from '../base/model-loader.ts';
 import { getModel } from '../base/model-state.ts';

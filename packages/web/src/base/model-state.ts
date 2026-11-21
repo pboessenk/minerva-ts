@@ -1,5 +1,5 @@
 /** The raw model JSON as loaded from the server, and whether it has unsaved changes. */
-import type { RawModel } from '../editor/model-types.ts';
+import type { RawModel } from '@minerva/core';
 import { invalidateSearchIndex } from '../editor/search-page.ts';
 
 export type { RawModel };

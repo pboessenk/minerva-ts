@@ -22,6 +22,7 @@ import type {
   Security,
   Server,
 } from './types.ts';
+import type * as File from './file.ts';
 
 /** The model file could not be read as a model. `message` says where and why. */
 export class ModelDecodeError extends Error {
@@ -140,6 +141,36 @@ const model: Decoder<Model> = struct<Model>({
 });
 
 /**
+ * Compile-time check that every key a decoder reads is declared in the file
+ * types of `file.ts`: a key missing there makes one of the lines below fail
+ * to type-check. (The file types may declare more: keys only the editor reads.)
+ */
+type ReadsOnly<Decoded, Raw> = Exclude<keyof Decoded, keyof Raw> extends never ? true : Exclude<keyof Decoded, keyof Raw>;
+const fileKeysDeclared: [
+  ReadsOnly<Model, File.RawModel>,
+  ReadsOnly<Contact, File.RawContact>,
+  ReadsOnly<Security, File.RawSecurity>,
+  ReadsOnly<Server, File.RawServer>,
+  ReadsOnly<Changelog, File.RawChangelog>,
+  ReadsOnly<ChangelogRelease, File.RawChangelogRelease>,
+  ReadsOnly<ChangelogEntry, File.RawChangelogEntry>,
+  ReadsOnly<CompareSource, File.RawCompareSource>,
+  ReadsOnly<OpenPoint, File.RawOpenPoint>,
+  ReadsOnly<Attribute, File.RawAttribute>,
+  ReadsOnly<Section, File.RawSection>,
+  ReadsOnly<Child, File.RawChild>,
+  ReadsOnly<Entity, File.RawEntity>,
+  ReadsOnly<EnumValue, File.RawEnumValue>,
+  ReadsOnly<Enum, File.RawEnum>,
+  ReadsOnly<Parameter, File.RawParameter>,
+  ReadsOnly<OperationResponse, File.RawOperationResponse>,
+  ReadsOnly<Operation, File.RawOperation>,
+  ReadsOnly<Example, File.RawExample>,
+  ReadsOnly<ModelExportSettings, File.RawExportSettings>,
+] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+void fileKeysDeclared;
+
+/**
  * Reads a model file.
  *
  * @throws ModelDecodeError when the text is not JSON or a value has the
@@ -150,7 +181,7 @@ export function decodeModel(text: string): Model {
   try {
     root = parseJson(text);
   } catch (err) {
-    if (err instanceof JsonSyntaxError) throw new ModelDecodeError(`${err.message} (offset ${err.offset})`);
+    if (err instanceof JsonSyntaxError) throw new ModelDecodeError(err.message);
     throw err;
   }
   const ctx = new DecodeContext(text);

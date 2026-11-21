@@ -20,6 +20,12 @@ exports OpenAPI 3.1, TypeSpec, TypeScript, CSV and a standalone HTML reference.
 > are welcome to fork or clone it and continue on your own, under the
 > [MIT licence](LICENSE).
 
+> **LLM disclosure.** All code in this repository was written with LLMs,
+> with Opus 5.5 and Fable 5.2 doing the heavy lifting. It is a direct
+> translation into TypeScript of the original Minerva, which is not open
+> source. The original was mostly handwritten in Go and JavaScript, with
+> LLMs doing much of the work on the exporters.
+
 <p align="center">
   <img src="docs/images/editor-entity.png" alt="The entity editor: the attributes of a Dwelling entity, each linked to a SIVI reference and codelist">
 </p>

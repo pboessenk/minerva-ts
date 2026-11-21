@@ -1,7 +1,7 @@
 /**
  * Add and delete attributes of an entity.
  */
-import type { RawAttr } from './types.ts';
+import type { RawAttribute } from '@minerva/core';
 import { emptyConstraints } from './constraints.ts';
 import { renderEntityDetail } from './entity-render.ts';
 import { getRawModel } from './model-access.ts';
@@ -42,7 +42,7 @@ export function addAttribute(entityName: string): void {
   const targetSection = entity.sections[entity.sections.length - 1]!;
   if (!targetSection.attributes) targetSection.attributes = [];
 
-  const newRawAttr: RawAttr = {
+  const newRawAttr: RawAttribute = {
     name: newName,
     type: 'string',
     ...emptyConstraints(),
@@ -108,7 +108,7 @@ export function addSiviAttribute(entityName: string): void {
   const targetSection = entity.sections[entity.sections.length - 1]!;
   if (!targetSection.attributes) targetSection.attributes = [];
 
-  const newRawAttr: RawAttr = {
+  const newRawAttr: RawAttribute = {
     name: '',
     type: 'string',
     ...emptyConstraints(),

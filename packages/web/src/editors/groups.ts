@@ -2,7 +2,7 @@
  * Sync of the runtime attributes back into the raw model's sections, and
  * management of the group headers (sections) between attributes.
  */
-import type { RawAttr, RawSection } from './types.ts';
+import type { RawAttribute, RawSection } from '@minerva/core';
 import { pickConstraints } from './constraints.ts';
 import { renderEntityDetail } from './entity-render.ts';
 import { getRawModel } from './model-access.ts';
@@ -19,7 +19,7 @@ export function _syncAttrsToRawSections(entityName: string): void {
 
   // Rebuild sections from the flat attrs array
   const newSections: RawSection[] = [];
-  let currentSection: RawSection & { attributes: RawAttr[] } = { name: null, attributes: [] };
+  let currentSection: RawSection & { attributes: RawAttribute[] } = { name: null, attributes: [] };
   newSections.push(currentSection);
 
   for (const a of rtEntity.attrs) {
@@ -28,7 +28,7 @@ export function _syncAttrsToRawSections(entityName: string): void {
       newSections.push(currentSection);
     } else {
       // Find original raw attribute to preserve all fields
-      let rawAttr: RawAttr | undefined | null = null;
+      let rawAttr: RawAttribute | undefined | null = null;
       for (const sec of entity.sections || []) {
         rawAttr = (sec.attributes || []).find((ra) => ra.name === a.name);
         if (rawAttr) break;

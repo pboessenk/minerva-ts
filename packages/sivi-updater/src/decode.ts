@@ -28,27 +28,32 @@ function eachField(obj: Obj, fields: readonly string[], visit: (field: string, v
   }
 }
 
+/** Rejects a value of the wrong type: `codelist.Name: expected string, found number`. */
+function mismatch(what: string, expected: string, v: unknown): DecodeError {
+  return new DecodeError(`${what}: expected ${expected}, found ${typeName(v)}`);
+}
+
 function str(v: unknown, what: string): string {
-  if (typeof v !== 'string') throw new DecodeError(`json: cannot unmarshal ${typeName(v)} into Go struct field ${what} of type string`);
+  if (typeof v !== 'string') throw mismatch(what, 'string', v);
   return v.toWellFormed();
 }
 
 function arr<T>(v: unknown, what: string, item: (x: unknown) => T): T[] {
-  if (!Array.isArray(v)) throw new DecodeError(`json: cannot unmarshal ${typeName(v)} into Go struct field ${what} of type array`);
+  if (!Array.isArray(v)) throw mismatch(what, 'array', v);
   return v.map(item);
 }
 
 function struct(v: unknown, what: string): Obj {
   if (v === null) return {};
-  if (!isObject(v)) throw new DecodeError(`json: cannot unmarshal ${typeName(v)} into Go value of type ${what}`);
+  if (!isObject(v)) throw mismatch(what, 'object', v);
   return v;
 }
 
 function decodeCode(v: unknown): ClCode {
   const out: ClCode = { CodeValue: '', Description: '' };
   eachField(struct(v, 'code'), ['CodeValue', 'Description'], (f, x) => {
-    if (f === 'CodeValue') out.CodeValue = str(x, 'clCode.CodeValue');
-    else out.Description = str(x, 'clCode.Description');
+    if (f === 'CodeValue') out.CodeValue = str(x, 'code.CodeValue');
+    else out.Description = str(x, 'code.Description');
   });
   return out;
 }
@@ -56,9 +61,9 @@ function decodeCode(v: unknown): ClCode {
 export function decodeClItem(v: unknown): ClItem {
   const out: ClItem = { Name: '', Description: '', Code: null };
   eachField(struct(v, 'codelist'), ['Name', 'Description', 'Code'], (f, x) => {
-    if (f === 'Name') out.Name = str(x, 'clItem.Name');
-    else if (f === 'Description') out.Description = str(x, 'clItem.Description');
-    else out.Code = arr(x, 'clItem.Code', decodeCode);
+    if (f === 'Name') out.Name = str(x, 'codelist.Name');
+    else if (f === 'Description') out.Description = str(x, 'codelist.Description');
+    else out.Code = arr(x, 'codelist.Code', decodeCode);
   });
   return out;
 }
@@ -66,17 +71,17 @@ export function decodeClItem(v: unknown): ClItem {
 function decodeAttribute(v: unknown): DcAttribute {
   const out: DcAttribute = { Name: '', Description: '', Datatype: '', Codelist: '', AFD1: '' };
   eachField(struct(v, 'attribute'), ['Name', 'Description', 'Datatype', 'Codelist', 'AFD1'], (f, x) => {
-    out[f as keyof DcAttribute] = str(x, `dcAttribute.${f}`);
+    out[f as keyof DcAttribute] = str(x, `attribute.${f}`);
   });
   return out;
 }
 
 function decodeEntityType(v: unknown): DcEntityType {
   const out: DcEntityType = { Name: '', Description: '', Attribute: [] };
-  eachField(struct(v, 'entity type'), ['Name', 'Description', 'Attribute'], (f, x) => {
-    if (f === 'Name') out.Name = str(x, 'dcEntityType.Name');
-    else if (f === 'Description') out.Description = str(x, 'dcEntityType.Description');
-    else out.Attribute = arr(x, 'dcEntityType.Attribute', decodeAttribute);
+  eachField(struct(v, 'entityType'), ['Name', 'Description', 'Attribute'], (f, x) => {
+    if (f === 'Name') out.Name = str(x, 'entityType.Name');
+    else if (f === 'Description') out.Description = str(x, 'entityType.Description');
+    else out.Attribute = arr(x, 'entityType.Attribute', decodeAttribute);
   });
   return out;
 }
@@ -84,9 +89,9 @@ function decodeEntityType(v: unknown): DcEntityType {
 export function decodeDcEntity(v: unknown): DcEntity {
   const out: DcEntity = { Name: '', Description: '', EntityType: [] };
   eachField(struct(v, 'entity'), ['Name', 'Description', 'EntityType'], (f, x) => {
-    if (f === 'Name') out.Name = str(x, 'dcEntity.Name');
-    else if (f === 'Description') out.Description = str(x, 'dcEntity.Description');
-    else out.EntityType = arr(x, 'dcEntity.EntityType', decodeEntityType);
+    if (f === 'Name') out.Name = str(x, 'entity.Name');
+    else if (f === 'Description') out.Description = str(x, 'entity.Description');
+    else out.EntityType = arr(x, 'entity.EntityType', decodeEntityType);
   });
   return out;
 }

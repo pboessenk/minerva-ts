@@ -15,7 +15,8 @@ import { flushExampleForm } from './example-page.ts';
 import { getEntities, getExamples, getOps } from './model-access.ts';
 import { respSchemaForCode } from './responses.ts';
 import { exposeFunctions } from '../globals.ts';
-import type { ApiAttr, ApiExample, ApiOp, JsonObject } from './types.ts';
+import type { JsonObject } from './types.ts';
+import type { ApiAttr, ApiExample, ApiOperation } from '../editor/model-types.ts';
 import { downloadTextFile, showToast } from '../base/ui.ts';
 
 export interface CsvRow {
@@ -112,7 +113,7 @@ function flattenBody(part: string, body: unknown, entityName: string | null, row
  * response status code and body. Works on the stored example object as well
  * as on a freshly flushed one (request/response may be null or absent).
  */
-export function exampleCsvRows(ex: ApiExample | undefined | null, op: ApiOp | undefined): CsvRow[] {
+export function exampleCsvRows(ex: ApiExample | undefined | null, op: ApiOperation | undefined): CsvRow[] {
   const rows: CsvRow[] = [];
   if (!ex) return rows;
   const params = ex.parameterValues || {};

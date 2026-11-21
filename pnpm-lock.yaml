@@ -49,6 +49,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@minerva/core':
+        specifier: workspace:*
+        version: link:../core
       cytoscape:
         specifier: 3.28.1
         version: 3.28.1

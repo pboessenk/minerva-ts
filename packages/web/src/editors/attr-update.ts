@@ -1,8 +1,8 @@
 /**
  * Update an attribute field in both the raw JSON model and the runtime model.
  */
-import type { RawAttr } from './types.ts';
-import { CONSTRAINT_KEYS, pruneConstraints } from './constraints.ts';
+import type { RawAttribute } from '@minerva/core';
+import { CONSTRAINT_FIELDS, pruneConstraints } from './constraints.ts';
 import { _deriveSiviSubtypes } from './sivi.ts';
 import { _syncEnumEntityType } from './subtype-changes.ts';
 import { getRawModel } from './model-access.ts';
@@ -21,7 +21,7 @@ export function updateAttribute(entityName: string, attrName: string, field: str
   // Find the attribute in the raw model (nested in sections)
   const entity = model.entities[entityName];
   let found = false;
-  let rawAttr: RawAttr | null = null;
+  let rawAttr: RawAttribute | null = null;
   for (const section of entity.sections || []) {
     for (const attr of section.attributes || []) {
       if (attr.name === attrName) {
@@ -64,7 +64,7 @@ export function updateAttribute(entityName: string, attrName: string, field: str
 
   // Drop validation constraints the attribute can no longer carry after a
   // type / required / codelist change (every exporter would skip them).
-  if (!(CONSTRAINT_KEYS as readonly string[]).includes(field) && runtimeEntity) {
+  if (!(CONSTRAINT_FIELDS as readonly string[]).includes(field) && runtimeEntity) {
     const rtName = field === 'name' ? value : attrName;
     pruneConstraints(
       rawAttr,

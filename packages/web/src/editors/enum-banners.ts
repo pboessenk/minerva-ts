@@ -1,13 +1,13 @@
 /**
  * Banners (open points) of an enum: add, delete, change type, edit text.
  */
-import type { Banner } from './types.ts';
+import type { OpenPoint } from '../editor/model-types.ts';
 import { getRawModel } from './model-access.ts';
 import { selectApiEntity } from '../editor/sidebar.ts';
 import { setDirty } from '../base/model-state.ts';
 import { state } from '../editor/state.ts';
 
-function _getEnumBannerList(enumName: string): Banner[] | null {
+function _getEnumBannerList(enumName: string): OpenPoint[] | null {
   const en = state.apiEnums![enumName];
   if (!en) return null;
   if (!en.openPoints) en.openPoints = [];
@@ -41,7 +41,7 @@ export function deleteEnumBanner(enumName: string, idx: number): void {
 export function cycleEnumBannerType(enumName: string, idx: number): void {
   const points = _getEnumBannerList(enumName);
   if (!points || idx < 0 || idx >= points.length) return;
-  const cycle: Banner['type'][] = ['info', 'warning', 'error'];
+  const cycle: OpenPoint['type'][] = ['info', 'warning', 'error'];
   const cur = cycle.indexOf(points[idx]!.type);
   points[idx]!.type = cycle[(cur + 1) % cycle.length]!;
   _syncEnumBannersToModel(enumName);

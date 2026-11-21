@@ -540,7 +540,7 @@ export function normalizeContract(doc: OaDocument): { ir: IrDoc; findings: Drift
       const node = item?.get(verb);
       if (node === undefined) continue;
       const method = verb.toUpperCase();
-      const op = decodeOperation(node);
+      const op = decodeOperation(node, ['paths', path, verb]);
       if (typeof op === 'string') {
         n.findings.push(
           finding({

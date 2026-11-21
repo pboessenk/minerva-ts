@@ -1,5 +1,6 @@
 /** JSON export of an example body and preparation of a pasted JSON import. */
-import type { ApiOp, ExampleBody, JsonObject, TypeMap } from '../types.ts';
+import type { ExampleBody, JsonObject, TypeMap } from '../types.ts';
+import type { ApiOperation } from '../../editor/model-types.ts';
 import { collectFormValues } from './collect.ts';
 import { reconcileExampleData } from './reconcile.ts';
 import { getEntities, getOps, getExamples } from '../model-access.ts';
@@ -79,7 +80,7 @@ export type ImportResult =
  * without touching getExamples(). The caller shows `dropped`/`notes` in a
  * review step and stores `cleaned` as the new example's request.
  */
-export function prepareExampleImport(op: ApiOp | undefined | null, rawText: string): ImportResult {
+export function prepareExampleImport(op: ApiOperation | undefined | null, rawText: string): ImportResult {
   const entityName = op ? op.requestBody : null;
   if (!op || !entityName || !getEntities()?.[entityName]) {
     return { ok: false, error: 'This operation has no request body entity to import into.' };
@@ -92,7 +93,7 @@ export function prepareExampleImport(op: ApiOp | undefined | null, rawText: stri
  * pasted JSON body against the schema of one response (op.responses[code]).
  * Same return shape.
  */
-export function prepareResponseImport(op: ApiOp | undefined | null, code: string, rawText: string): ImportResult {
+export function prepareResponseImport(op: ApiOperation | undefined | null, code: string, rawText: string): ImportResult {
   const resp = op && op.responses ? op.responses[code] : null;
   const entityName = resp ? resp.schema : null;
   if (!resp || !entityName || !getEntities()?.[entityName]) {

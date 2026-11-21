@@ -1,8 +1,13 @@
 /**
  * Import dialog of the allowed-values picker.
  */
-import type { SourceValue } from './types.ts';
 import { escapeHtml } from '../base/ui.ts';
+
+/** One value the picker offers for an attribute. */
+export interface SourceValue {
+  code: string;
+  desc: string;
+}
 
 /**
  * Sub-dialog for the allowed-values picker: paste a comma/semicolon/newline

@@ -94,7 +94,7 @@ describe('uploaded contracts', () => {
     expect(await call(`model=${FILE}`)).toEqual({ status: 400, body: 'Empty OpenAPI document\n' });
     expect(await call(`model=${FILE}`, '{"openapi": 5}')).toEqual({
       status: 400,
-      body: 'Invalid OpenAPI JSON: json: cannot unmarshal number into Go struct field oaDocument.openapi of type string\n',
+      body: 'Invalid OpenAPI JSON: #/openapi: expected string, found number 5\n',
     });
     expect(await call(`model=${FILE}`, '{}')).toEqual({
       status: 400,

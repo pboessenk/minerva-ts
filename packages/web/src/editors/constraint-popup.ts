@@ -4,10 +4,11 @@
  * bump-dialog idiom: the Rules column cell is far too narrow for in-cell
  * editing.
  */
-import type { Constraints } from './types.ts';
+import { attributeBase, constraintScope, validateAttributeConstraints } from '@minerva/core';
+import type { AttrConstraints } from '../editor/model-types.ts';
 import {
-  CONSTRAINT_KEYS,
-  _constraintTypeInfo,
+  CONSTRAINT_FIELDS,
+  constraintSubject,
   constraintSummary,
   constraintsForAttr,
   emptyConstraints,
@@ -26,7 +27,8 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
   if (!attr) return;
   const keys = constraintsForAttr(attr);
   if (keys.length === 0) return;
-  const ti = _constraintTypeInfo(attr);
+  const scope = constraintScope(constraintSubject(attr));
+  const isBoolean = attributeBase(attr.type || '').base === 'boolean';
   const current = pickConstraints(attr);
 
   const field = (key: string, label: string, extra?: string) => `
@@ -38,25 +40,25 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
   const exclusiveBox = (key: string) => `<label class="ca-cons-excl"><input type="checkbox" data-excl="${key}"> exclusive</label>`;
 
   let body = '';
-  if (ti.isString) {
+  if (scope.string) {
     body +=
       '<div class="ca-cons-section">String</div>' +
       field('minLength', 'Min length') +
       field('maxLength', 'Max length') +
       field('pattern', 'Pattern');
   }
-  if (ti.isNumeric) {
+  if (scope.numeric) {
     body +=
       '<div class="ca-cons-section">Value</div>' +
       field('minimum', 'Minimum', exclusiveBox('minimum')) +
       field('maximum', 'Maximum', exclusiveBox('maximum'));
   }
-  if (ti.isArray) {
+  if (scope.array) {
     body += '<div class="ca-cons-section">Items</div>' + field('minItems', 'Min items') + field('maxItems', 'Max items');
   }
   if (keys.includes('default')) {
     body += '<div class="ca-cons-section">Default</div>';
-    body += ti.isBoolean
+    body += isBoolean
       ? `<label class="ca-cons-row"><span class="ca-cons-label">Default</span>
                 <select class="ca-cons-input ca-cons-select" data-key="default">
                     <option value="">(none)</option><option value="true">true</option><option value="false">false</option>
@@ -95,7 +97,7 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
   // Initial values. A bound input shows whichever of the inclusive /
   // exclusive pair is set; the checkbox records which one it was.
   for (const k of ['minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'default'] as const) {
-    if (inputs[k] && current[k as keyof Constraints] != null) inputs[k].value = String(current[k as keyof Constraints]);
+    if (inputs[k] && current[k as keyof AttrConstraints] != null) inputs[k].value = String(current[k as keyof AttrConstraints]);
   }
   const seedBound = (inputKey: 'minimum' | 'maximum', exclKey: 'exclusiveMinimum' | 'exclusiveMaximum') => {
     if (!inputs[inputKey]) return;
@@ -105,13 +107,17 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
   };
   seedBound('minimum', 'exclusiveMinimum');
   seedBound('maximum', 'exclusiveMaximum');
-  clearBtn.disabled = !CONSTRAINT_KEYS.some((k) => current[k] != null && current[k] !== '');
+  clearBtn.disabled = !CONSTRAINT_FIELDS.some((k) => current[k] != null && current[k] !== '');
 
   const NUMBER_RE = /^-?\d+(\.\d+)?$/;
 
   // Read the form into {key: value|null}; numbers are stored as JSON
-  // numbers (a string would break the Go model decoder), pattern and
-  // default as strings. Returns the first validation error, if any.
+  // numbers (the server's model decoder rejects a bound written as a
+  // string), pattern and default as strings. Only the input text is checked
+  // here; how the values relate (min below max, the default within range)
+  // is core's validateAttributeConstraints, the check the save runs too.
+  // Patterns are ECMA-262, so only the browser can check them.
+  // Returns the first error, if any.
   const readDraft = () => {
     const draft = emptyConstraints();
     const errors: string[] = [];
@@ -132,20 +138,12 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
         errors.push(label + ' must be a number');
         return;
       }
-      const n = Number(v);
-      if (ti.isInteger && !Number.isInteger(n)) {
-        errors.push(label + ' must be an integer for ' + attr.type);
-        return;
-      }
-      draft[excl[inputKey] && excl[inputKey].checked ? exclKey : inputKey] = n;
+      draft[excl[inputKey] && excl[inputKey].checked ? exclKey : inputKey] = Number(v);
     };
 
-    if (ti.isString) {
+    if (scope.string) {
       count('minLength', 'Min length');
       count('maxLength', 'Max length');
-      if (draft.minLength != null && draft.maxLength != null && draft.minLength > draft.maxLength) {
-        errors.push('Min length exceeds max length');
-      }
       const p = raw('pattern');
       if (p !== '') {
         try {
@@ -156,62 +154,30 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
         }
       }
     }
-    if (ti.isNumeric) {
+    if (scope.numeric) {
       bound('minimum', 'exclusiveMinimum', 'Minimum');
       bound('maximum', 'exclusiveMaximum', 'Maximum');
-      const lo = draft.minimum != null ? draft.minimum : draft.exclusiveMinimum;
-      const hi = draft.maximum != null ? draft.maximum : draft.exclusiveMaximum;
-      const anyExcl = draft.exclusiveMinimum != null || draft.exclusiveMaximum != null;
-      if (lo != null && hi != null && (anyExcl ? lo >= hi : lo > hi)) {
-        errors.push(anyExcl ? 'Minimum must be below maximum when a bound is exclusive' : 'Minimum exceeds maximum');
-      }
     }
-    if (ti.isArray) {
+    if (scope.array) {
       count('minItems', 'Min items');
       count('maxItems', 'Max items');
-      if (draft.minItems != null && draft.maxItems != null && draft.minItems > draft.maxItems) {
-        errors.push('Min items exceeds max items');
-      }
     }
     if (keys.includes('default')) {
       const d = raw('default');
-      if (d !== '') {
-        if (ti.isBoolean) {
-          draft.default = d;
-        } else if (ti.isNumeric) {
-          // The default is stored as text, so an integer attribute needs an
-          // integer literal ("1.0" would export as a float).
-          const n = Number(d);
-          if (!NUMBER_RE.test(d)) errors.push('Default must be a number');
-          else if (ti.isInteger && !/^-?\d+$/.test(d)) errors.push('Default must be an integer for ' + attr.type);
-          else {
-            if (draft.minimum != null && n < draft.minimum) errors.push('Default is below minimum');
-            if (draft.exclusiveMinimum != null && n <= draft.exclusiveMinimum) errors.push('Default is not above the exclusive minimum');
-            if (draft.maximum != null && n > draft.maximum) errors.push('Default is above maximum');
-            if (draft.exclusiveMaximum != null && n >= draft.exclusiveMaximum) errors.push('Default is not below the exclusive maximum');
-            draft.default = d;
-          }
-        } else {
-          const len = Array.from(d).length;
-          if (draft.minLength != null && len < draft.minLength) errors.push('Default is shorter than min length');
-          if (draft.maxLength != null && len > draft.maxLength) errors.push('Default is longer than max length');
-          if (draft.pattern != null) {
-            try {
-              if (!new RegExp(draft.pattern).test(d)) errors.push('Default does not match the pattern');
-            } catch {
-              /* reported above */
-            }
-          }
-          draft.default = d;
-        }
-      }
+      if (d !== '') draft.default = d;
+    }
+    if (errors.length === 0) {
+      errors.push(...validateAttributeConstraints({ ...constraintSubject(attr), ...draft }));
+    }
+    if (errors.length === 0 && draft.pattern != null && draft.default != null && !new RegExp(draft.pattern).test(draft.default)) {
+      errors.push('default does not match the pattern');
     }
     return { draft, error: errors[0] || '' };
   };
 
   const validate = () => {
     const { draft, error } = readDraft();
-    const summary = constraintSummary(Object.assign({}, attr, draft));
+    const summary = constraintSummary({ ...attr, ...draft });
     msgEl.textContent = error || (summary.length ? summary.join(' · ') : 'No rules — saving clears them all.');
     msgEl.className = 'ca-cons-msg' + (error ? ' ca-cons-error' : '');
     saveBtn.disabled = !!error;
@@ -229,10 +195,10 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
 
   // Write every changed key through updateAttribute (both graphs), then
   // re-render once. Keys the type no longer supports are nulled as well.
-  const commit = (draft: Constraints) => {
+  const commit = (draft: AttrConstraints) => {
     close();
     let changed = false;
-    for (const k of CONSTRAINT_KEYS) {
+    for (const k of CONSTRAINT_FIELDS) {
       const next = draft[k] != null ? draft[k] : null;
       const prev = current[k] != null ? current[k] : null;
       if (next === prev) continue;

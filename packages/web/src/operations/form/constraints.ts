@@ -1,14 +1,14 @@
-import type { ApiAttr, Constraints } from '../types.ts';
-import type { RtAttr } from '../../editors/types.ts';
+import type { SetConstraints } from '../types.ts';
+import type { ApiAttr } from '../../editor/model-types.ts';
 import { constraintsForAttr } from '../../editors/constraints.ts';
 
 /** Applicable, set constraints of an attribute (default excluded: it is not a rule on the value). */
-export function activeConstraints(attr: ApiAttr): Constraints {
+export function activeConstraints(attr: ApiAttr): SetConstraints {
   const out: Record<string, unknown> = {};
-  for (const k of constraintsForAttr(attr as unknown as RtAttr)) {
+  for (const k of constraintsForAttr(attr)) {
     if (k !== 'default' && attr[k] != null && attr[k] !== '') out[k] = attr[k];
   }
-  return out as Constraints;
+  return out as SetConstraints;
 }
 
 /** Record the attribute's constraints on the element the violation scanner visits. */

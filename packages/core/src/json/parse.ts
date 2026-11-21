@@ -77,12 +77,36 @@ function isDigit(c: number): boolean {
   return c >= 0x30 && c <= 0x39;
 }
 
-function describe(text: string, i: number): string {
-  return i < text.length ? `invalid character ${JSON.stringify(text[i])}` : 'unexpected end of JSON input';
+/** 1-based line and column of an offset; a column counts UTF-16 units, as editors do. */
+function position(text: string, i: number): string {
+  const lineStart = text.lastIndexOf('\n', i - 1) + 1;
+  let line = 1;
+  for (let k = text.indexOf('\n'); k !== -1 && k < i; k = text.indexOf('\n', k + 1)) line++;
+  return `line ${line}, column ${i - lineStart + 1}`;
 }
 
-function fail(text: string, i: number, where: string): never {
-  throw new JsonSyntaxError(i < text.length ? `${describe(text, i)} ${where}` : describe(text, i), i);
+/**
+ * Throws a syntax error at offset `i`. `problem` says what was wrong or
+ * expected; the character found there and the position are appended. At the
+ * end of the input the message is always "unexpected end of JSON input".
+ */
+/** The character at `i` as an error shows it: quoted, or as `U+FEFF` when it would be invisible. */
+function shown(text: string, i: number): string {
+  const code = text.codePointAt(i) ?? 0;
+  const invisible =
+    code < 0x20 ||
+    (code >= 0x7f && code <= 0xa0) ||
+    code === 0xad ||
+    (code >= 0x200b && code <= 0x200f) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0xfeff;
+  return invisible ? 'U+' + code.toString(16).toUpperCase().padStart(4, '0') : JSON.stringify(String.fromCodePoint(code));
+}
+
+function fail(text: string, i: number, problem: string): never {
+  const found = i < text.length ? `${problem}, found ${shown(text, i)}` : 'unexpected end of JSON input';
+  throw new JsonSyntaxError(`${found} at ${position(text, i)}`, i);
 }
 
 /** Decodes a string literal's text. Unpaired surrogate escapes become U+FFFD. */
@@ -93,18 +117,18 @@ export function decodeStringLiteral(literal: string): string {
 function parseString(text: string, start: number): JsonString {
   let i = start + 1;
   for (;;) {
-    if (i >= text.length) fail(text, i, '');
+    if (i >= text.length) fail(text, i, 'unterminated string');
     const c = text.charCodeAt(i);
     if (c === 0x22) break;
-    if (c < 0x20) fail(text, i, 'in string literal');
+    if (c < 0x20) fail(text, i, 'unescaped control character in string');
     if (c === 0x5c) {
       const e = text[i + 1];
       if (e === 'u') {
-        if (!/^[0-9a-fA-F]{4}$/.test(text.slice(i + 2, i + 6))) fail(text, i + 2, 'in \\u hexadecimal character escape');
+        if (!/^[0-9a-fA-F]{4}$/.test(text.slice(i + 2, i + 6))) fail(text, i + 2, 'bad \\u escape in string');
         i += 6;
         continue;
       }
-      if (e === undefined || !'"\\/bfnrt'.includes(e)) fail(text, i + 1, 'in string escape code');
+      if (e === undefined || !'"\\/bfnrt'.includes(e)) fail(text, i + 1, 'bad escape sequence in string');
       i += 2;
       continue;
     }
@@ -122,17 +146,17 @@ function parseNumber(text: string, start: number): JsonNumber {
   } else if (isDigit(text.charCodeAt(i))) {
     while (isDigit(text.charCodeAt(i))) i++;
   } else {
-    fail(text, i, 'in numeric literal');
+    fail(text, i, 'expected a digit after the minus sign');
   }
   if (text[i] === '.') {
     i++;
-    if (!isDigit(text.charCodeAt(i))) fail(text, i, 'after decimal point in numeric literal');
+    if (!isDigit(text.charCodeAt(i))) fail(text, i, 'expected a digit after the decimal point');
     while (isDigit(text.charCodeAt(i))) i++;
   }
   if (text[i] === 'e' || text[i] === 'E') {
     i++;
     if (text[i] === '+' || text[i] === '-') i++;
-    if (!isDigit(text.charCodeAt(i))) fail(text, i, 'in exponent of numeric literal');
+    if (!isDigit(text.charCodeAt(i))) fail(text, i, 'expected a digit in the exponent');
     while (isDigit(text.charCodeAt(i))) i++;
   }
   return { kind: 'number', text: text.slice(start, i), start, end: i };
@@ -140,7 +164,7 @@ function parseNumber(text: string, start: number): JsonNumber {
 
 function parseLiteral(text: string, start: number, word: string): number {
   for (let k = 1; k < word.length; k++) {
-    if (text[start + k] !== word[k]) fail(text, start + k, `in literal ${word} (expecting ${JSON.stringify(word[k])})`);
+    if (text[start + k] !== word[k]) fail(text, start + k, `expected ${JSON.stringify(word)}`);
   }
   return start + word.length;
 }
@@ -157,7 +181,7 @@ function parseLiteral(text: string, start: number, word: string): number {
  */
 export function parseValueAt(text: string, pos: number): JsonNode {
   const start = skipSpace(text, pos);
-  if (start >= text.length) fail(text, start, '');
+  if (start >= text.length) fail(text, start, 'expected a value');
   switch (text[start]) {
     case '{': {
       const entries: JsonEntry[] = [];
@@ -165,10 +189,10 @@ export function parseValueAt(text: string, pos: number): JsonNode {
       if (text[i] === '}') return { kind: 'object', entries, start, end: i + 1 };
       for (;;) {
         i = skipSpace(text, i);
-        if (text[i] !== '"') fail(text, i, 'looking for beginning of object key string');
+        if (text[i] !== '"') fail(text, i, 'expected a double-quoted property name');
         const key = parseString(text, i);
         i = skipSpace(text, key.end);
-        if (text[i] !== ':') fail(text, i, 'after object key');
+        if (text[i] !== ':') fail(text, i, 'expected ":" after property name');
         const value = parseValueAt(text, i + 1);
         entries.push({ key: key.value, keyStart: key.start, keyEnd: key.end, value });
         i = skipSpace(text, value.end);
@@ -177,7 +201,7 @@ export function parseValueAt(text: string, pos: number): JsonNode {
           continue;
         }
         if (text[i] === '}') return { kind: 'object', entries, start, end: i + 1 };
-        fail(text, i, 'after object key:value pair');
+        fail(text, i, 'expected "," or "}" after property value');
       }
     }
     case '[': {
@@ -193,7 +217,7 @@ export function parseValueAt(text: string, pos: number): JsonNode {
           continue;
         }
         if (text[i] === ']') return { kind: 'array', items, start, end: i + 1 };
-        fail(text, i, 'after array element');
+        fail(text, i, 'expected "," or "]" after array element');
       }
     }
     case '"':
@@ -207,7 +231,7 @@ export function parseValueAt(text: string, pos: number): JsonNode {
     default: {
       const c = text.charCodeAt(start);
       if (c === 0x2d || isDigit(c)) return parseNumber(text, start);
-      return fail(text, start, 'looking for beginning of value');
+      return fail(text, start, 'expected a value');
     }
   }
 }
@@ -216,7 +240,7 @@ export function parseValueAt(text: string, pos: number): JsonNode {
 export function parseJson(text: string): JsonNode {
   const node = parseValueAt(text, 0);
   const rest = skipSpace(text, node.end);
-  if (rest < text.length) fail(text, rest, 'after top-level value');
+  if (rest < text.length) fail(text, rest, 'expected end of input after the JSON value');
   return node;
 }
 

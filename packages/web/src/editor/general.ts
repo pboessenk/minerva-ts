@@ -4,7 +4,8 @@
  * Renders into #listView when the General sidebar button is clicked.
  */
 import { openBumpDialog, renderChangelogPane } from './changelog.ts';
-import type { ApiConfig, RawContact, RawSecurity, RawServer } from './model-types.ts';
+import type { RawContact, RawSecurity, RawServer } from '@minerva/core';
+import type { ApiConfig } from './model-types.ts';
 import { state } from './state.ts';
 import { getModel, setDirty } from '../base/model-state.ts';
 import { applyViewButtonColors, currentView, views, type ViewDef } from '../base/registry.ts';

@@ -5,7 +5,7 @@ import { exposeFunctions } from '../globals.ts';
 import { showApiGraph } from './graph.ts';
 import { buildApiSidebar } from './sidebar.ts';
 import { loadedModel, rebuildFromRawModel, state } from './state.ts';
-import type { RawModel } from './model-types.ts';
+import type { JsonValue, RawModel } from '@minerva/core';
 import { showToast } from '../base/ui.ts';
 import { renderEntityDetail } from '../editors/entity-render.ts';
 import { renderApiOperation } from '../operations/op-detail.ts';
@@ -143,8 +143,9 @@ export async function editorSave(): Promise<boolean> {
       technicalName: ex.technicalName || undefined,
       summary: ex.summary || undefined,
       parameterValues: ex.parameterValues && Object.keys(ex.parameterValues).length > 0 ? ex.parameterValues : undefined,
-      request: ex.request || undefined,
-      response: ex.response || undefined,
+      // Example bodies are objects of form values, which are all JSON.
+      request: (ex.request || undefined) as JsonValue | undefined,
+      response: (ex.response || undefined) as JsonValue | undefined,
       responseCode: ex.responseCode || undefined,
     }));
 

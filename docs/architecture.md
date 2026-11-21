@@ -20,10 +20,17 @@
 Dependencies only point down. `core` imports nothing but itself and has no
 I/O, so it could run unchanged in the browser.
 
-The editor does not use it yet. It has its own copy of the model types
-(`web/src/editor/model-types.ts`) and of the constraint rules
-(`web/src/editors/constraints.ts`), and it reaches the server only over HTTP.
-Moving the editor onto `core` is planned work, so that each rule exists once.
+The editor bundles part of it. The shape of a model file
+(`core/src/model/file.ts`) and the constraint rules (which keyword applies to
+which type, how values relate, how a summary reads) come from `core`, so the
+editor, the save validation and the exporters cannot disagree. The editor
+keeps its own view model for rendering (`web/src/editor/model-types.ts`),
+built from the file shapes, and reaches the server only over HTTP.
+
+The next step in that direction would be to move the edits themselves
+(rename, add an attribute, sync subtypes, prune constraints) into `core` as
+functions that take a model and return a new one, with unit tests, leaving
+the editor as the view on top. It needs browser tests of the editor first.
 
 ## core
 
@@ -36,8 +43,9 @@ Moving the editor onto `core` is planned work, so that each rule exists once.
 - `json/`: a parser that keeps key order, duplicate keys and number spelling;
   a streaming reader; typed decoding. Example payloads in a model are kept
   as the exact text the editor wrote.
-- `model/`: the decoded model types, the decoder, constraint rules and save
-  validation.
+- `model/`: the model file's JSON shape (`file.ts`), the decoded model
+  types, the decoder, constraint rules and save validation. The decoder
+  checks at compile time that every key it reads is declared in `file.ts`.
 - `catalog/`: the SIVI catalogue, its on-disk format, and the lookups
   exporters use (descriptions, codelist values, workspace overrides).
 - `export/`: what every exporter needs: entity order, discriminated

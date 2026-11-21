@@ -1,13 +1,13 @@
 /**
  * Banners (open points) of an entity: add, delete, change type, edit text.
  */
-import type { Banner } from './types.ts';
+import type { OpenPoint } from '../editor/model-types.ts';
 import { getRawModel } from './model-access.ts';
 import { selectApiEntity } from '../editor/sidebar.ts';
 import { setDirty } from '../base/model-state.ts';
 import { state } from '../editor/state.ts';
 
-function _getBannerList(entityName: string): Banner[] | null {
+function _getBannerList(entityName: string): OpenPoint[] | null {
   const e = state.apiModel![entityName];
   if (!e) return null;
   if (!e.openPoints) e.openPoints = [];
@@ -41,7 +41,7 @@ export function deleteBanner(entityName: string, idx: number): void {
 export function cycleBannerType(entityName: string, idx: number): void {
   const points = _getBannerList(entityName);
   if (!points || idx < 0 || idx >= points.length) return;
-  const cycle: Banner['type'][] = ['info', 'warning', 'error'];
+  const cycle: OpenPoint['type'][] = ['info', 'warning', 'error'];
   const cur = cycle.indexOf(points[idx]!.type);
   points[idx]!.type = cycle[(cur + 1) % cycle.length]!;
   _syncBannersToModel(entityName);

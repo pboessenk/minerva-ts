@@ -5,6 +5,8 @@
  * activated; the generic editor modules read it. Unconverted scripts reach
  * the same variables as globals (`apiModel`, `apiEnums`, ...), see `install`.
  */
+import type { Cardinality, RawModel, RawOpenPoint } from '@minerva/core';
+import type { ExampleBody } from '../operations/types.ts';
 import { resetGraph } from './graph.ts';
 import type {
   ApiAttr,
@@ -16,11 +18,7 @@ import type {
   ApiExample,
   ApiModelMap,
   ApiOperation,
-  Cardinality,
   OpenPoint,
-  OpenPointType,
-  RawModel,
-  RawOpenPoint,
 } from './model-types.ts';
 import { pickConstraints } from '../editors/constraints.ts';
 import { storeModel } from '../base/model-state.ts';
@@ -98,7 +96,7 @@ export async function loadApiModel(dataPath: string): Promise<void> {
 
 function runtimeOpenPoint(p: RawOpenPoint): OpenPoint {
   // The type is validated by the server's model schema.
-  return typeof p === 'string' ? { text: p, type: 'warning' } : { text: p.text || '', type: (p.type || 'warning') as OpenPointType };
+  return { text: p.text || '', type: p.type || 'warning' };
 }
 
 /**
@@ -184,8 +182,9 @@ export function rebuildFromRawModel(json: RawModel): void {
     technicalName: ex.technicalName || '',
     summary: ex.summary || '',
     parameterValues: ex.parameterValues || {},
-    request: ex.request || null,
-    response: ex.response || null,
+    // The file allows any JSON here; the example editor works on objects and arrays of objects.
+    request: (ex.request || null) as ExampleBody,
+    response: (ex.response || null) as ExampleBody,
     responseCode: ex.responseCode || '',
   }));
 

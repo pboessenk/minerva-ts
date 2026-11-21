@@ -4,6 +4,7 @@
 import { _syncAttrsToRawSections } from './groups.ts';
 import { renderEntityDetail } from './entity-render.ts';
 import { setDirty } from '../base/model-state.ts';
+import type { ApiAttr } from '../editor/model-types.ts';
 import { state } from '../editor/state.ts';
 
 interface DragState {
@@ -84,7 +85,7 @@ export function initDragAndDrop(entityName: string): void {
     const targetIdx = parseInt(target.dataset.attridx!, 10);
     if (Number.isNaN(dragIdx) || Number.isNaN(targetIdx)) return;
 
-    const [item] = rtEntity.attrs.splice(dragIdx, 1) as [import('./types.ts').RtAttr];
+    const [item] = rtEntity.attrs.splice(dragIdx, 1) as [ApiAttr];
 
     let newIdx: number;
     if (target.classList.contains('ca-drop-end-row')) {

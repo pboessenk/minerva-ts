@@ -1,7 +1,7 @@
 /**
  * Entity-level editing: description, create, flags, delete and rename.
  */
-import type { RtEntity } from './types.ts';
+import type { ApiEntity } from '../editor/model-types.ts';
 import { getRawModel } from './model-access.ts';
 import { refreshGraph } from '../editor/graph.ts';
 import { buildApiSidebar, selectApiEntity, showApiGraphView } from '../editor/sidebar.ts';
@@ -130,7 +130,7 @@ export function createEntity(): void {
       attrs: [],
       openPoint: null,
       openPoints: [],
-    } as unknown as RtEntity;
+    } as unknown as ApiEntity;
 
     setDirty(true);
     close();
@@ -170,7 +170,7 @@ export function toggleEntityExcludeFromInclusion(entityName: string, excluded: b
   const e = state.apiModel![entityName];
   if (!e) return;
   if (excluded) e.excludeFromInclusion = true;
-  else delete (e as Partial<RtEntity>).excludeFromInclusion;
+  else delete (e as Partial<ApiEntity>).excludeFromInclusion;
   const m = getRawModel()!;
   if (m && m.entities[entityName]) {
     if (excluded) m.entities[entityName].excludeFromInclusion = true;

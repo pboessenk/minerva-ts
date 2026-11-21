@@ -2,7 +2,7 @@
  * Enum CRUD: create, delete and rename (the latter also rewrites the types of
  * the attributes that use the enum).
  */
-import type { RtEnum } from './types.ts';
+import type { ApiEnum } from '../editor/model-types.ts';
 import { getRawModel } from './model-access.ts';
 import { showToast } from '../base/ui.ts';
 import { refreshGraph } from '../editor/graph.ts';
@@ -61,7 +61,7 @@ export function createEnum(): void {
     model.enums[name] = { description: '', values: [] };
 
     // Add to runtime model
-    state.apiEnums![name] = { desc: '', values: [] } as unknown as RtEnum;
+    state.apiEnums![name] = { desc: '', values: [] } as unknown as ApiEnum;
 
     setDirty(true);
     close();

@@ -1,5 +1,5 @@
 /** Required-field and rule validation of a rendered example form, shown as a badge with a panel. */
-import type { Constraints } from '../types.ts';
+import type { SetConstraints } from '../types.ts';
 import { escapeHtml } from '../../base/ui.ts';
 
 interface MissingField {
@@ -104,9 +104,9 @@ function scanConstraintViolations(container: HTMLElement | null): ConstraintViol
     const optBody = el.closest<HTMLElement>('.ca-form-optional-body');
     if (optBody && optBody.style.display === 'none') return;
     if (el.dataset.excluded === 'true') return;
-    let c: Constraints;
+    let c: SetConstraints;
     try {
-      c = JSON.parse(el.dataset.constraints ?? '') as Constraints;
+      c = JSON.parse(el.dataset.constraints ?? '') as SetConstraints;
     } catch {
       return;
     }
@@ -139,14 +139,14 @@ function scanConstraintViolations(container: HTMLElement | null): ConstraintViol
   return out;
 }
 
-function checkItemCount(n: number, c: Constraints, problems: string[]): void {
+function checkItemCount(n: number, c: SetConstraints, problems: string[]): void {
   if (n > 0 && c.minItems != null && n < c.minItems)
     problems.push('at least ' + c.minItems + ' item' + (c.minItems === 1 ? '' : 's') + ' (has ' + n + ')');
   if (c.maxItems != null && n > c.maxItems)
     problems.push('at most ' + c.maxItems + ' item' + (c.maxItems === 1 ? '' : 's') + ' (has ' + n + ')');
 }
 
-function checkScalarValue(v: string, baseType: string | undefined, c: Constraints, problems: string[]): void {
+function checkScalarValue(v: string, baseType: string | undefined, c: SetConstraints, problems: string[]): void {
   if (baseType === 'number' || baseType === 'integer') {
     const n = Number(v);
     if (Number.isNaN(n)) return;

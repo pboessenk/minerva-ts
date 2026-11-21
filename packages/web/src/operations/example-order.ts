@@ -3,7 +3,7 @@ import { getExamples, getOps } from './model-access.ts';
 import { flushExampleForm } from './example-page.ts';
 import { defaultRespCode } from './responses.ts';
 import { must } from './dom.ts';
-import type { ApiExample } from './types.ts';
+import type { ApiExample } from '../editor/model-types.ts';
 import { escapeHtml, showToast } from '../base/ui.ts';
 import { buildApiSidebar, selectApiEntity } from '../editor/sidebar.ts';
 import { setDirty } from '../base/model-state.ts';

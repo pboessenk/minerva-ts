@@ -2,7 +2,9 @@
  * Builders of the copyable code of an entity: a JSON example and TypeScript
  * types (with the enums and codelists they refer to).
  */
-import type { RtAttr } from './types.ts';
+import { hasNamedType } from '@minerva/core';
+import type { ApiAttr } from '../editor/model-types.ts';
+import { constraintSubject } from './constraints.ts';
 import type { DatacatEntity } from './model-access.ts';
 import { codelistByName, datacat } from './model-access.ts';
 import { state } from '../editor/state.ts';
@@ -153,9 +155,9 @@ export function _buildEntityTS(entityName: string, subtype: string | null): stri
   const emittedIfaces = new Set<string>();
   const visiting = new Set<string>(); // cycle detection
 
-  function _collectNamedTypes(ownerEntity: string, attrList: RtAttr[]) {
+  function _collectNamedTypes(ownerEntity: string, attrList: ApiAttr[]) {
     for (const a of attrList) {
-      const hasNamed = (a.allowedValues && a.allowedValues.length) || a.codelist;
+      const hasNamed = hasNamedType(constraintSubject(a));
       if (!hasNamed) continue;
       // Skip allowed-values alias when the enum itself will be emitted
       if (a.name === 'entityType' && enumNames.has(a.type)) continue;
@@ -196,11 +198,11 @@ export function _buildEntityTS(entityName: string, subtype: string | null): stri
     }
   }
 
-  function _collectEnums(attrList: RtAttr[]) {
+  function _collectEnums(attrList: ApiAttr[]) {
     for (const a of attrList) {
       // Attrs with a named subset alias use the alias as their TS type;
       // the underlying enum is not referenced and should not be emitted.
-      const hasNamedAlias = (a.allowedValues && a.allowedValues.length) || a.codelist;
+      const hasNamedAlias = hasNamedType(constraintSubject(a));
       if (hasNamedAlias) continue;
       const isArray = a.type.endsWith('[]');
       const baseType = isArray ? a.type.slice(0, -2) : a.type;
@@ -234,10 +236,10 @@ export function _buildEntityTS(entityName: string, subtype: string | null): stri
     }
   }
 
-  function _writeAttr(ownerEntity: string, a: RtAttr, lines: string[], forceType?: string) {
+  function _writeAttr(ownerEntity: string, a: ApiAttr, lines: string[], forceType?: string) {
     const opt = a.required ? '' : '?';
     let tsType = forceType || _toTsType(a.type);
-    const hasNamed = (a.allowedValues && a.allowedValues.length) || a.codelist;
+    const hasNamed = hasNamedType(constraintSubject(a));
     if (hasNamed && !forceType) {
       const typeName = a.allowedName || ownerEntity + _toPascalCase(a.name);
       if (a.type.endsWith('[]')) tsType = typeName + '[]';

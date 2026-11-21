@@ -1,9 +1,8 @@
 /** Controls for single attributes: labels, primitives, enums and plain arrays. */
-import type { ApiAttr } from '../types.ts';
 import { applyFieldConstraints, stampConstraints } from './constraints.ts';
 import { truncate } from './type-info.ts';
 import { getEnums } from '../model-access.ts';
-import type { RtAttr } from '../../editors/types.ts';
+import type { ApiAttr } from '../../editor/model-types.ts';
 import { constraintSummary } from '../../editors/constraints.ts';
 
 /**
@@ -26,7 +25,7 @@ export function makeLabel(attr: ApiAttr): HTMLDivElement {
   if (attr.description) lines.push(['Description', attr.description]);
   if (attr.note) lines.push(['Notes', attr.note]);
   if (attr.example) lines.push(['Example', String(attr.example)]);
-  for (const rule of constraintSummary(attr as unknown as RtAttr)) {
+  for (const rule of constraintSummary(attr)) {
     const sep = rule.indexOf(': ');
     lines.push([rule.slice(0, sep), rule.slice(sep + 2)]);
   }

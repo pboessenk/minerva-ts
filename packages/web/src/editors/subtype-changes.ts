@@ -2,7 +2,7 @@
  * Subtypes of an entity (the values of its entityType attribute) and how a
  * change in them is carried into the attributes' applicableSubtypes.
  */
-import type { RtAttr } from './types.ts';
+import type { ApiAttr } from '../editor/model-types.ts';
 import { findRawAttr } from './constraints.ts';
 import { _siviTypesFor } from './sivi.ts';
 import { getRawModel } from './model-access.ts';
@@ -50,7 +50,7 @@ export function _syncEnumEntityType(entityName: string): boolean {
  * The subtypes an entity currently has: its entityType allowedValues, or, for
  * an enum-typed entityType without an explicit list, all of the enum's values.
  */
-export function _effectiveSubtypes(etAttr: RtAttr | null | undefined): string[] {
+export function _effectiveSubtypes(etAttr: ApiAttr | null | undefined): string[] {
   if (!etAttr) return [];
   if (etAttr.allowedValues && etAttr.allowedValues.length > 0) return etAttr.allowedValues;
   const enumDef = state.apiEnums && state.apiEnums![etAttr.type];

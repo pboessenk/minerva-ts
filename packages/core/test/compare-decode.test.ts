@@ -15,42 +15,39 @@ function parseError(text: string): string {
 
 describe('contract decoding', () => {
   it('reports the first value of the wrong type with its location', () => {
-    expect(parseError('{"openapi": 5, "info": {"title": 6}}')).toBe(
-      'json: cannot unmarshal number into Go struct field oaDocument.openapi of type string',
-    );
-    expect(parseError('{"OPENAPI": 5}')).toBe('json: cannot unmarshal number into Go struct field oaDocument.OPENAPI of type string');
-    expect(parseError('{"info": 5}')).toBe(
-      'json: cannot unmarshal number into Go struct field oaDocument.info of type struct { Title string "json:\\"title\\""; Version string "json:\\"version\\"" }',
-    );
-    expect(parseError('{"paths": {"/a": [5]}}')).toBe(
-      'json: cannot unmarshal array into Go struct field oaDocument.paths.~1a of type map[string]jsontext.Value',
-    );
+    expect(parseError('{"openapi": 5, "info": {"title": 6}}')).toBe('#/openapi: expected string, found number 5');
+    expect(parseError('{"OPENAPI": 5}')).toBe('#/OPENAPI: expected string, found number 5');
+    expect(parseError('{"info": 5}')).toBe('#/info: expected object, found number 5');
+    expect(parseError('{"paths": {"/a": [5]}}')).toBe('#/paths/~1a: expected object, found array');
     expect(parseError('{"components": {"schemas": {"A/b~c": {"description": 5}}}}')).toBe(
-      'json: cannot unmarshal number into Go struct field oaDocument.components.schemas.A~1b~0c.description of type string',
+      '#/components/schemas/A~1b~0c/description: expected string, found number 5',
     );
     expect(parseError('{"components": {"schemas": {"A": {"minLength": "5"}}}}')).toBe(
-      'json: cannot unmarshal string into Go struct field oaDocument.components.schemas.A.minLength of type float64',
+      '#/components/schemas/A/minLength: expected number, found string',
     );
     expect(parseError('{"components": {"schemas": {"A": {"required": [5]}}}}')).toBe(
-      'json: cannot unmarshal number into oaDocument.components.schemas.A.required.0 of type string',
+      '#/components/schemas/A/required/0: expected string, found number 5',
     );
     expect(parseError('{"components": {"schemas": {"A": {"allOf": [true]}}}}')).toBe(
-      'json: cannot unmarshal bool into oaDocument.components.schemas.A.allOf.0 of type main.oaSchema',
+      '#/components/schemas/A/allOf/0: expected object, found boolean',
     );
     expect(parseError('{"components": {"schemas": {"A": {"type": [1, 2e999]}}}}')).toBe(
-      'json: cannot unmarshal number 2e999 into oaDocument.components.schemas.A.type.1 of type float64',
+      '#/components/schemas/A/type/1: expected a finite number, found number 2e999',
     );
     expect(parseError('{"components": {"schemas": {"A": {"enum": {}}}}}')).toBe(
-      'json: cannot unmarshal object into Go struct field oaDocument.components.schemas.A.enum of type []interface {}',
+      '#/components/schemas/A/enum: expected array, found object',
     );
-    expect(parseError('[]')).toBe('json: cannot unmarshal array into Go value of type main.oaDocument');
+    expect(parseError('[]')).toBe('#: expected object, found array');
   });
 
   it('lets a syntax error win over type errors', () => {
-    expect(parseError('{"openapi": 5, "paths": {')).toBe('unexpected end of JSON input');
-    expect(parseError('{nope')).toBe("invalid character 'n' looking for beginning of object key string");
-    expect(parseError('{"a":"\\x"}')).toBe('invalid escape sequence `\\x` in string');
-    expect(parseError('{"a":nul}')).toBe("invalid character '}' in literal null (expecting 'l')");
+    expect(parseError('{"openapi": 5, "paths": {')).toBe('unexpected end of JSON input at line 1, column 26');
+    expect(parseError('{nope')).toBe('expected a double-quoted property name, found "n" at line 1, column 2');
+    expect(parseError('{"a":"\\x"}')).toBe('bad escape sequence in string, found "x" at line 1, column 8');
+    expect(parseError('{"a":nul}')).toBe('expected "null", found "}" at line 1, column 9');
+    expect(parseError('{\n  "openapi": 5,\n  "paths": [1 2]\n}')).toBe(
+      'expected "," or "]" after array element, found "2" at line 3, column 15',
+    );
   });
 
   it('requires one of openapi, paths and components.schemas', () => {
@@ -103,7 +100,7 @@ describe('contract decoding', () => {
       { name: 'id', in: 'path', required: false, type: 'string' },
     ]);
     expect(findings.map((f) => [f.operation, f.changeNeeded])).toEqual([
-      ['PUT /a/{id}', 'Could not parse this contract operation: json: cannot unmarshal number into oaOperation.tags.1 of type string'],
+      ['PUT /a/{id}', 'Could not parse this contract operation: #/paths/~1a~1{id}/put/tags/1: expected string, found number 1'],
     ]);
   });
 

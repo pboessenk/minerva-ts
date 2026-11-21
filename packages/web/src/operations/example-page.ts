@@ -2,7 +2,8 @@
 import { getEntities, getExamples, getOps } from './model-access.ts';
 import { buildEntityForm, collectFormValues, initFormValidation, reconcileExampleData, stripTypeMap } from './example-form.ts';
 import { buildRespCodeOptions, defaultRespCode, respSchemaForCode } from './responses.ts';
-import type { ApiOp, JsonObject, TypeMap } from './types.ts';
+import type { JsonObject, TypeMap } from './types.ts';
+import type { ApiOperation } from '../editor/model-types.ts';
 import { must } from './dom.ts';
 import { setDirty } from '../base/model-state.ts';
 import { escapeHtml } from '../base/ui.ts';
@@ -15,7 +16,7 @@ function typeMapOf(item: unknown): TypeMap | null {
   return tm ? (tm as TypeMap) : null;
 }
 
-export function rebuildRespForm(container: HTMLElement, op: ApiOp | undefined, code: string, data: unknown, rawExId: string): void {
+export function rebuildRespForm(container: HTMLElement, op: ApiOperation | undefined, code: string, data: unknown, rawExId: string): void {
   container.innerHTML = '';
   const { entity, isArray } = respSchemaForCode(op, code);
   if (!entity || !getEntities()?.[entity]) return;

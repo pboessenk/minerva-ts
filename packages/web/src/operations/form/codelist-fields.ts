@@ -1,5 +1,6 @@
 /** Picker fields backed by SIVI codelists and SIVI entity sub-types. */
-import type { ApiAttr, CodelistCode, EntityTypeSubtype } from '../types.ts';
+import type { CodelistCode, EntityTypeSubtype } from '../types.ts';
+import type { ApiAttr } from '../../editor/model-types.ts';
 import { makeLabel, appendTag } from './fields.ts';
 import { stampConstraints } from './constraints.ts';
 import { getCodelistMap, getEntityTypeData } from '../model-access.ts';
