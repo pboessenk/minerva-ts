@@ -1,0 +1,7 @@
+{
+  "defaultModel": "shop_model.json",
+  "models": [
+    { "id": "shop", "file": "shop_model.json", "label": "Shop", "group": "Commerce", "color": "#2f81f7" },
+    { "id": "notes", "file": "notes_model.json", "label": "", "group": "", "color": "" }
+  ]
+}

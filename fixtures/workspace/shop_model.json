@@ -1,0 +1,411 @@
+{
+  "version": "2.1.0",
+  "color": "#2f81f7",
+  "title": "Shop API",
+  "subtitle": "Orders, customers and deliveries.\nA second line follows directly.\n\nA new paragraph.\n\n\n\nAfter extra blank lines.",
+  "lastModified": "2026-01-02T03:04:05.000Z",
+  "export": { "namespace": "Shop", "primaryRoot": "Order" },
+  "servers": [
+    { "url": "https://api.example.com/v1", "description": "Production" },
+    { "url": "https://sandbox.example.com/v1", "description": "" }
+  ],
+  "security": { "enabled": true, "bearerFormat": "JWT", "description": "Bearer token with the 'orders' scope." },
+  "contact": { "name": "Shop Team", "email": "team@example.com", "url": "https://example.com/support" },
+  "changelog": {
+    "open": [{ "category": "added", "text": "Gift wrapping" }],
+    "releases": [{ "version": "2.0.0", "date": "2025-12-01", "entries": [{ "category": "changed", "text": "Split Party into subtypes" }] }]
+  },
+  "compareSources": [{ "id": "upstream", "label": "Upstream contract", "path": "contracts/missing.json" }],
+  "entities": {
+    "Order": {
+      "description": "A customer's order.\nIt holds lines and a delivery.",
+      "root": true,
+      "children": [
+        { "name": "OrderLine", "cardinality": "1..*" },
+        { "name": "Address", "cardinality": "0..1" }
+      ],
+      "openPoints": [{ "text": "Confirm rounding of totals", "type": "warning" }],
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "orderId", "type": "string", "required": true, "description": "Identifier chosen by the client.", "example": "ORD-0001", "pattern": "^[A-Z]{3}-\\d{4}$", "minLength": 8, "maxLength": 8, "siviReference": "order.orderId", "siviCodelist": null, "notes": "Internal: keep stable" },
+            { "name": "createdAt", "type": "string", "format": "date-time", "required": true, "description": "", "example": "2026-01-02T03:04:05Z", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "deliveryDate", "type": "Date", "required": false, "description": "", "example": "2026-02-01", "siviReference": "order.deliveryDate", "siviCodelist": null, "notes": "" },
+            { "name": "total", "type": "number", "required": true, "minimum": 0, "exclusiveMaximum": 1000000, "description": "Total in euros, it's \"gross\".", "example": "149.95", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "quantity", "type": "integer", "required": false, "minimum": 1, "maximum": 99, "default": " 1 ", "description": "", "example": "3", "siviReference": "order.quantity", "siviCodelist": null, "notes": "" },
+            { "name": "giftWrap", "type": "boolean", "required": false, "default": "TRUE", "description": "Wrap as a gift.", "example": "False", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "channel", "type": "Channel", "required": true, "description": "Where the order came from.", "example": "web", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "status", "type": "string", "required": true, "allowedValues": ["01", "10"], "allowedName": "OrderStatus", "siviReference": "order.status", "siviCodelist": "STA002", "description": "", "example": "01", "notes": "" },
+            { "name": "colour", "type": "string", "required": false, "siviReference": null, "siviCodelist": "CLR001", "description": "Preferred colour.", "example": "", "notes": "" },
+            { "name": "tags", "type": "string[]", "required": false, "minItems": 1, "maxItems": 5, "pattern": "^[a-z]+$", "maxLength": 20, "description": "Free tags.", "example": "rush", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "sizes", "type": "Size[]", "required": false, "description": "", "example": "", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "ratings", "type": "number[]", "required": false, "minimum": 0.5, "maximum": 1e21, "minItems": 0, "description": "Ratings.", "example": "4.5", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "customer", "type": "Party", "required": true, "description": "", "example": "", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "lines", "type": "OrderLine[]", "required": true, "minItems": 1, "description": "Order lines.", "example": "", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "delivery", "type": "Address", "required": false, "description": "", "example": "", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "items", "type": "Asset[]", "required": false, "description": "", "example": "", "siviReference": null, "siviCodelist": null, "notes": "" },
+            { "name": "fees", "type": "Fee[]", "required": false, "description": "", "example": "", "siviReference": null, "siviCodelist": null, "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Party": {
+      "description": "Someone involved in an order.",
+      "children": [{ "name": "Address", "cardinality": "*" }],
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "entityType", "type": "string", "required": true, "allowedValues": ["privatePerson", "company"], "allowedName": "PartyType", "siviReference": "party.entityType", "siviCodelist": null, "description": "", "example": "privatePerson", "notes": "" },
+            { "name": "name", "type": "string", "required": true, "maxLength": 100, "siviReference": "party.name", "siviCodelist": null, "description": "", "example": "Ada", "notes": "" },
+            { "name": "email", "type": "string", "format": "email", "required": false, "siviReference": "party.email", "siviCodelist": null, "description": "Contact address.", "example": "ada@example.com", "notes": "" },
+            { "name": "birthDate", "type": "Date", "required": false, "applicableSubtypes": ["privatePerson"], "siviReference": "party.birthDate", "siviCodelist": null, "description": "", "example": "1990-12-10", "notes": "" },
+            { "name": "registrationNumber", "type": "string", "required": true, "applicableSubtypes": ["company"], "pattern": "^\\d{8}$", "siviReference": "party.registrationNumber", "siviCodelist": null, "description": "", "example": "12345678", "notes": "" },
+            { "name": "payment", "type": "string", "required": false, "applicableSubtypes": ["company", "privatePerson"], "siviReference": "party.payment", "siviCodelist": "PAY003", "allowedValues": [], "description": "", "example": "", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Asset": {
+      "description": "An item in the order.",
+      "sections": [
+        {
+          "name": "Identity",
+          "attributes": [
+            { "name": "entityType", "type": "string", "required": true, "allowedValues": ["car", "bicycle"], "allowedName": "", "siviReference": "object.entityType", "siviCodelist": null, "description": "", "example": "car", "notes": "" }
+          ]
+        },
+        {
+          "name": "Details",
+          "attributes": [
+            { "name": "make", "type": "string", "required": true, "applicableSubtypes": ["car"], "siviReference": "object.make", "siviCodelist": null, "description": "", "example": "Volvo", "notes": "" },
+            { "name": "frameSize", "type": "integer", "required": false, "applicableSubtypes": ["bicycle"], "siviReference": "object.frameSize", "siviCodelist": null, "description": "", "example": "54", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Fee": {
+      "description": "",
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "entityType", "type": "string", "required": false, "allowedValues": ["shipping", "service"], "allowedName": "FeeType", "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "amount", "type": "number", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "4.95", "notes": "" },
+            { "name": "carrier", "type": "string", "required": false, "applicableSubtypes": ["shipping"], "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "FeeBase": {
+      "description": "Takes the name the shared base of Fee would get.",
+      "sections": [
+        { "name": null, "attributes": [{ "name": "x", "type": "string", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" }] }
+      ]
+    },
+    "OrderLine": {
+      "description": "One product line.",
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "product", "type": "string", "required": true, "siviReference": null, "siviCodelist": null, "description": "Stock keeping unit.", "example": "SKU-1", "notes": "" },
+            { "name": "quantity", "type": "int", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "2", "notes": "" },
+            { "name": "unitPrice", "type": "number", "format": "float", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "9.99", "notes": "" },
+            { "name": "discount", "type": "number", "required": false, "exclusiveMinimum": 0, "maximum": 100, "default": "0.5", "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "colours", "type": "string[]", "required": false, "minItems": 1, "siviReference": null, "siviCodelist": "CLR001", "description": "", "example": "02", "notes": "" },
+            { "name": "altPayment", "type": "string", "required": false, "siviReference": null, "siviCodelist": "PAY003", "description": "", "example": "", "notes": "" },
+            { "name": "channelSubset", "type": "Channel", "required": false, "allowedValues": ["web"], "allowedName": "", "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "big", "type": "integer", "format": "int64", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "9007199254740993", "notes": "" },
+            { "name": "ratio", "type": "number", "format": "double", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "uid", "type": "string", "format": "uuid", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "link", "type": "string", "format": "uri", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "blob", "type": "string", "format": "byte", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "secret", "type": "string", "format": "password", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "day", "type": "string", "format": "date", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Address": {
+      "description": "",
+      "sections": [
+        {
+          "name": "Street",
+          "attributes": [
+            { "name": "street", "type": "string", "required": true, "siviReference": "address.street", "siviCodelist": null, "description": "", "example": "Main St", "notes": "" },
+            { "name": "houseNumber", "type": "integer", "required": true, "siviReference": "Address.HouseNumber", "siviCodelist": null, "description": "", "example": "12", "notes": "" }
+          ]
+        },
+        {
+          "name": "Location & region",
+          "attributes": [
+            { "name": "city", "type": "string", "required": true, "siviReference": "address.city", "siviCodelist": null, "description": "", "example": "Springfield", "notes": "" },
+            { "name": "country", "type": "string", "required": false, "siviReference": "address.country", "siviCodelist": "EMPTY4", "description": "", "example": "", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Error": {
+      "description": "Problem details.",
+      "excludeFromInclusion": true,
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "code", "type": "string", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "E42", "notes": "" },
+            { "name": "message", "type": "string", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" },
+            { "name": "details", "type": "string[]", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Result": {
+      "description": "Outcome of a request.",
+      "root": true,
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "id", "type": "string", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "R-1", "notes": "" },
+            { "name": "accepted", "type": "boolean", "required": true, "siviReference": null, "siviCodelist": null, "description": "", "example": "true", "notes": "" },
+            { "name": "warnings", "type": "Error[]", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Document": {
+      "description": "An attachment.",
+      "root": true,
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "fileName", "type": "string", "required": true, "maxLength": 255, "siviReference": null, "siviCodelist": null, "description": "", "example": "invoice.pdf", "notes": "" },
+            { "name": "content", "type": "string", "format": "byte", "required": true, "siviReference": null, "siviCodelist": null, "description": "Base64 content.", "example": "", "notes": "" },
+            { "name": "kind", "type": "DocumentKind", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "invoice", "notes": "" }
+          ]
+        }
+      ]
+    },
+    "Zeta": {
+      "description": "Not reachable from any root.",
+      "sections": []
+    },
+    "alpha": {
+      "description": "",
+      "sections": [
+        { "name": null, "attributes": [{ "name": "note", "type": "string", "required": false, "siviReference": null, "siviCodelist": null, "description": "", "example": "", "notes": "" }] }
+      ]
+    }
+  },
+  "enums": {
+    "Channel": {
+      "description": "Sales channel.",
+      "values": [
+        { "name": "Web", "value": "web", "label": "Web shop", "description": "Orders placed online." },
+        { "name": "", "value": "store", "label": "In store", "description": "" },
+        { "name": "", "value": "phone_order", "label": "", "description": "" }
+      ],
+      "openPoints": [{ "text": "Add marketplace?", "type": "info" }]
+    },
+    "Size": {
+      "description": "Garment size.",
+      "values": [
+        { "name": "", "value": "S", "label": "", "description": "" },
+        { "name": "", "value": "M", "label": "", "description": "Medium" },
+        { "name": "", "value": "x-large", "label": "élan", "description": "" }
+      ]
+    },
+    "DocumentKind": {
+      "description": "Kind of document.",
+      "values": [
+        { "name": "", "value": "invoice", "label": "", "description": "" },
+        { "name": "", "value": "receipt", "label": "", "description": "" }
+      ]
+    },
+    "SortOrder": {
+      "description": "",
+      "values": [
+        { "name": "Asc", "value": "asc", "label": "", "description": "" },
+        { "name": "Desc", "value": "desc", "label": "", "description": "" }
+      ]
+    },
+    "Legacy": {
+      "description": "Not referenced anywhere.",
+      "values": [{ "name": "", "value": "old", "label": "", "description": "" }]
+    }
+  },
+  "operations": [
+    {
+      "id": "createOrder",
+      "method": "POST",
+      "path": "/orders",
+      "summary": "Place an order",
+      "description": "Creates an order.\nIdempotent per X-Request-Id.\n\n\nSee the guide.",
+      "tags": ["orders", "checkout"],
+      "requestBody": "Order",
+      "parameters": [
+        { "name": "X-Request-Id", "in": "header", "type": "string", "required": true, "description": "Idempotency key." },
+        { "name": "dryRun", "in": "query", "type": "boolean", "required": false, "description": "" }
+      ],
+      "responses": {
+        "201": { "description": "Created", "schema": "Result" },
+        "400": { "description": "Invalid order", "schema": "Error" },
+        "500": { "description": "It's broken", "schema": "" }
+      }
+    },
+    {
+      "id": "getOrder",
+      "method": "GET",
+      "path": "/orders/{orderId}",
+      "summary": "Get an order",
+      "description": "",
+      "tags": ["orders"],
+      "requestBody": "",
+      "parameters": [{ "name": "orderId", "in": "path", "type": "string", "required": true, "description": "The order." }],
+      "responses": {
+        "404": { "description": "Not found", "schema": "Error" },
+        "200": { "description": "The order", "schema": "Order" }
+      }
+    },
+    {
+      "id": "putAttachments",
+      "method": "PUT",
+      "path": "/orders/{orderId}/documents",
+      "summary": "Attach documents",
+      "description": "",
+      "tags": ["documents"],
+      "requestBody": "Document",
+      "requestBodyArray": true,
+      "parameters": [{ "name": "orderId", "in": "path", "type": "string", "required": true }],
+      "responses": {
+        "207": { "description": "One result per document", "schema": "Result", "responseBodyArray": true },
+        "413": { "description": "Too large", "schema": "Error" }
+      }
+    },
+    {
+      "id": "deleteOrder",
+      "method": "DELETE",
+      "path": "/orders/{orderId}",
+      "summary": "",
+      "description": "",
+      "tags": [],
+      "requestBody": "",
+      "parameters": [{ "name": "orderId", "in": "path", "type": "string", "required": true }],
+      "responses": { "204": { "description": "Deleted", "schema": "" } }
+    },
+    {
+      "id": "listChannels",
+      "method": "GET",
+      "path": "/channels",
+      "summary": "List channels",
+      "description": "",
+      "requestBody": "",
+      "parameters": [{ "name": "sort", "in": "query", "type": "SortOrder", "required": false, "description": "Sort direction." }],
+      "responses": { "200": { "description": "Channels", "schema": "Result" } }
+    }
+  ],
+  "examples": [
+    {
+      "id": "basic-order",
+      "operationId": "createOrder",
+      "technicalName": "basicOrder",
+      "summary": "A basic order with one line",
+      "parameterValues": { "X-Request-Id": "req-1", "dryRun": "" },
+      "request": {
+        "orderId": "ORD-0001",
+        "createdAt": "2026-01-02T03:04:05Z",
+        "total": " 149.95 ",
+        "quantity": "3",
+        "giftWrap": "TRUE",
+        "channel": "web",
+        "status": "01",
+        "tags": ["rush", "fragile"],
+        "ratings": ["4.5", "x", "1e3"],
+        "customer": { "entityType": "privatePerson", "name": "Ada <Lovelace> & co", "birthDate": "1990-12-10", "_typeMap": { "name": "string" } },
+        "lines": [{ "product": "SKU-1", "quantity": "2", "unitPrice": "9.99", "big": "9007199254740993" }],
+        "delivery": { "street": "Main St", "houseNumber": "12", "city": "Springfield" },
+        "_typeMap": { "total": "number" }
+      },
+      "response": { "id": "R-1", "accepted": "true", "warnings": [] },
+      "responseCode": "201"
+    },
+    {
+      "id": "company-order",
+      "operationId": "createOrder",
+      "technicalName": "",
+      "summary": "Company order, it's \"urgent\"",
+      "request": {
+        "orderId": "ORD-0002",
+        "total": 1.0,
+        "quantity": 1e3,
+        "giftWrap": false,
+        "customer": { "entityType": "company", "name": "Acme", "registrationNumber": "12345678" },
+        "lines": [],
+        "items": [{ "entityType": "car", "make": "Volvo" }, { "entityType": "bicycle", "frameSize": "54" }],
+        "fees": [{ "entityType": "shipping", "amount": "4.95", "carrier": "DHL" }],
+        "note": "multi\nline"
+      },
+      "response": { "code": "E42", "message": "Total too high", "details": ["a", "b"] },
+      "responseCode": "400"
+    },
+    {
+      "id": "odd-numbers",
+      "operationId": "createOrder",
+      "summary": "Numbers that are numbers only to some readers",
+      "request": { "orderId": "ORD-0003", "total": "1_000", "quantity": "+5", "lines": [{ "quantity": "7", "unitPrice": "Inf" }], "giftWrap": "yes" },
+      "response": null
+    },
+    {
+      "id": "empty",
+      "operationId": "createOrder",
+      "summary": "Nothing filled in",
+      "request": { "_typeMap": {} },
+      "response": {}
+    },
+    {
+      "id": "fetch",
+      "operationId": "getOrder",
+      "technicalName": "fetchOrder",
+      "summary": "Fetch",
+      "parameterValues": { "orderId": "ORD-0001" },
+      "response": { "orderId": "ORD-0001", "total": "10", "customer": { "entityType": "company", "name": "Acme" } },
+      "responseCode": "200"
+    },
+    {
+      "id": "fetch-missing",
+      "operationId": "getOrder",
+      "summary": "Missing",
+      "parameterValues": { "orderId": "nope" },
+      "response": { "code": "E404", "message": "No such order" },
+      "responseCode": "404"
+    },
+    {
+      "id": "attach-one",
+      "operationId": "putAttachments",
+      "summary": "Single document, wrapped into an array",
+      "parameterValues": { "orderId": "ORD-0001" },
+      "request": { "fileName": "a.pdf", "content": "JVBERi0=", "kind": "invoice" },
+      "response": [{ "id": "D-1", "accepted": "TRUE" }]
+    },
+    {
+      "id": "attach-two",
+      "operationId": "putAttachments",
+      "summary": "Two documents",
+      "request": [{ "fileName": "a.pdf", "content": "AA==" }, { "fileName": "b.pdf", "content": "BB==" }],
+      "response": { "id": "D-2", "accepted": "false" },
+      "responseCode": ""
+    },
+    {
+      "id": "raw-literals",
+      "operationId": "listChannels",
+      "summary": "Literals as written",
+      "parameterValues": { "sort": "asc" },
+      "response": { "id": "x", "nested": { "10": 1, "9": 2, "z": 12345678901234567890, "a": -0, "b": 1.50 } },
+      "responseCode": "200"
+    }
+  ],
+  "codelistNames": { "CLR001": "Colour", "UNUSED9": "Unused" }
+}

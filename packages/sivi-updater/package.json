@@ -1,0 +1,17 @@
+{
+  "name": "@minerva/sivi-updater",
+  "version": "0.0.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "description": "Fetches the public SIVI reference catalogue, diffs it against the local copy and updates it.",
+  "exports": {
+    ".": "./src/cli.ts"
+  },
+  "bin": {
+    "sivi-updater": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@minerva/core": "workspace:*"
+  }
+}

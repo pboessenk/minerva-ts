@@ -1,0 +1,24 @@
+# Allowlist: only these top-level entries are tracked. Add new ones here deliberately.
+# Everything else at the root (data directories, local tools, scratch copies)
+# stays out of the repository by default.
+/*
+!/.github/
+!/.gitattributes
+!/.gitignore
+!/README.md
+!/LICENSE
+!/SECURITY.md
+!/biome.json
+!/docs/
+!/fixtures/
+!/packages/
+!/package.json
+!/pnpm-lock.yaml
+!/pnpm-workspace.yaml
+!/tsconfig.json
+!/vitest.config.ts
+
+# Inside the allowed folders: the usual denylist.
+node_modules/
+dist/
+.DS_Store

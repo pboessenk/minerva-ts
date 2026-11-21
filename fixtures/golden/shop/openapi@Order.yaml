@@ -1,0 +1,750 @@
+openapi: '3.1.0'
+info:
+  title: 'Shop API'
+  version: '2.1.0'
+  description: |
+    Orders, customers and deliveries.  
+    A second line follows directly.
+
+    A new paragraph.
+
+    &nbsp;  
+    &nbsp;  
+    After extra blank lines.
+tags:
+  - name: 'checkout'
+  - name: 'documents'
+  - name: 'orders'
+paths:
+  /orders:
+    post:
+      summary: 'Place an order'
+      description: |
+        Creates an order.  
+        Idempotent per X-Request-Id.
+
+        &nbsp;  
+        See the guide.
+      tags:
+        - 'orders'
+        - 'checkout'
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Idempotency key.'
+          examples:
+            basicOrder:
+              value: 'req-1'
+        - name: dryRun
+          in: query
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+            examples:
+              basicOrder:
+                summary: 'A basic order with one line'
+                value:
+                  orderId: "ORD-0001"
+                  createdAt: "2026-01-02T03:04:05Z"
+                  total: 149.95
+                  quantity: 3
+                  giftWrap: true
+                  channel: "web"
+                  status: "01"
+                  tags: ["rush","fragile"]
+                  ratings: [4.5,"x",1e3]
+                  customer: {"entityType":"privatePerson","name":"Ada \u003cLovelace\u003e \u0026 co","birthDate":"1990-12-10"}
+                  lines: [{"product":"SKU-1","quantity":2,"unitPrice":9.99,"big":9007199254740993}]
+                  delivery: {"street":"Main St","houseNumber":12,"city":"Springfield"}
+              company-order:
+                summary: 'Company order, it''s "urgent"'
+                value:
+                  orderId: "ORD-0002"
+                  total: 1.0
+                  quantity: 1e3
+                  giftWrap: false
+                  customer: {"entityType":"company","name":"Acme","registrationNumber":"12345678"}
+                  lines: []
+                  items: [{"entityType":"car","make":"Volvo"},{"entityType":"bicycle","frameSize":54}]
+                  fees: [{"entityType":"shipping","amount":4.95,"carrier":"DHL"}]
+                  note: "multi\nline"
+              odd-numbers:
+                summary: 'Numbers that are numbers only to some readers'
+                value:
+                  orderId: "ORD-0003"
+                  total: 1
+      responses:
+        '201':
+          description: 'Created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                basicOrder:
+                  summary: 'A basic order with one line'
+                  value:
+                    id: "R-1"
+                    accepted: true
+                    warnings: []
+        '400':
+          description: 'Invalid order'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                company-order:
+                  summary: 'Company order, it''s "urgent"'
+                  value:
+                    code: "E42"
+                    message: "Total too high"
+                    details: ["a","b"]
+        '500':
+          description: 'It''s broken'
+  /orders/{orderId}:
+    get:
+      summary: 'Get an order'
+      tags:
+        - 'orders'
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'The order.'
+          examples:
+            fetchOrder:
+              value: 'ORD-0001'
+            fetch-missing:
+              value: 'nope'
+      responses:
+        '200':
+          description: 'The order'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                fetchOrder:
+                  summary: 'Fetch'
+                  value:
+                    orderId: "ORD-0001"
+                    total: 10
+                    customer: {"entityType":"company","name":"Acme"}
+        '404':
+          description: 'Not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                fetch-missing:
+                  summary: 'Missing'
+                  value:
+                    code: "E404"
+                    message: "No such order"
+  /orders/{orderId}/documents:
+    put:
+      summary: 'Attach documents'
+      tags:
+        - 'documents'
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            attach-one:
+              value: 'ORD-0001'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Document'
+            examples:
+              attach-one:
+                summary: 'Single document, wrapped into an array'
+                value:
+                  [
+                    {
+                      "fileName": "a.pdf",
+                      "content": "JVBERi0=",
+                      "kind": "invoice"
+                    }
+                  ]
+              attach-two:
+                summary: 'Two documents'
+                value:
+                  [
+                    {
+                      "fileName": "a.pdf",
+                      "content": "AA=="
+                    },
+                    {
+                      "fileName": "b.pdf",
+                      "content": "BB=="
+                    }
+                  ]
+      responses:
+        '207':
+          description: 'One result per document'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Result'
+              examples:
+                attach-one:
+                  summary: 'Single document, wrapped into an array'
+                  value:
+                    [
+                      {
+                        "id": "D-1",
+                        "accepted": true
+                      }
+                    ]
+                attach-two:
+                  summary: 'Two documents'
+                  value:
+                    [
+                      {
+                        "id": "D-2",
+                        "accepted": false
+                      }
+                    ]
+        '413':
+          description: 'Too large'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /channels:
+    get:
+      summary: 'List channels'
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: SortOrder
+          description: 'Sort direction.'
+          examples:
+            raw-literals:
+              value: 'asc'
+      responses:
+        '200':
+          description: 'Channels'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                raw-literals:
+                  summary: 'Literals as written'
+                  value:
+                    id: "x"
+                    nested: {"10":1,"9":2,"z":12345678901234567890,"a":-0,"b":1.50}
+components:
+  schemas:
+    Order:
+      type: object
+      description: |
+        A customer's order.  
+        It holds lines and a delivery.
+      required:
+        - orderId
+        - createdAt
+        - total
+        - channel
+        - status
+        - customer
+        - lines
+      properties:
+        orderId:
+          type: string
+          pattern: '^[A-Z]{3}-\d{4}$'
+          minLength: 8
+          maxLength: 8
+          description: 'Identifier chosen by the client.'
+          examples:
+            - 'ORD-0001'
+        createdAt:
+          type: string
+          format: date-time
+          examples:
+            - '2026-01-02T03:04:05Z'
+        deliveryDate:
+          type: string
+          format: date
+          description: 'Requested date.'
+          examples:
+            - '2026-02-01'
+        total:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMaximum: 1000000
+          description: 'Total in euros, it''s "gross".'
+          examples:
+            - 149.95
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 99
+          description: 'Number of items.'
+          examples:
+            - 3
+          default: 1
+        giftWrap:
+          type: boolean
+          description: 'Wrap as a gift.'
+          examples:
+            - false
+          default: true
+        channel:
+          $ref: '#/components/schemas/Channel'
+          description: 'Codelist: Channel. Where the order came from.'
+          examples:
+            - 'web'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+          description: 'Codelist: OrderStatus. Status.'
+          x-sivi-code: 'STA002'
+          examples:
+            - '01'
+        colour:
+          $ref: '#/components/schemas/Colour'
+          description: 'Codelist: Colour. Preferred colour.'
+          x-sivi-code: 'CLR001'
+        tags:
+          type: array
+          items:
+            type: string
+            pattern: '^[a-z]+$'
+            maxLength: 20
+          minItems: 1
+          maxItems: 5
+          description: 'Free tags.'
+          examples:
+            - 'rush'
+        sizes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Size'
+          description: 'Codelist: Size.'
+        ratings:
+          type: array
+          items:
+            type: number
+            format: double
+            minimum: 0.5
+            maximum: 1000000000000000000000
+          minItems: 0
+          description: 'Ratings.'
+          examples:
+            - '4.5'
+        customer:
+          $ref: '#/components/schemas/Party'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+          minItems: 1
+          description: 'Order lines.'
+        delivery:
+          $ref: '#/components/schemas/Address'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fee'
+    OrderLine:
+      type: object
+      description: 'One product line.'
+      required:
+        - product
+        - quantity
+        - unitPrice
+      properties:
+        product:
+          type: string
+          description: 'Stock keeping unit.'
+          examples:
+            - 'SKU-1'
+        quantity:
+          type: integer
+          format: int32
+          examples:
+            - 2
+        unitPrice:
+          type: number
+          format: float
+          examples:
+            - 9.99
+        discount:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          maximum: 100
+          default: 0.5
+        colours:
+          type: array
+          items:
+            $ref: '#/components/schemas/Colour'
+          minItems: 1
+          description: 'Codelist: Colour.'
+          x-sivi-code: 'CLR001'
+          examples:
+            - '02'
+        altPayment:
+          $ref: '#/components/schemas/PAY003'
+          description: 'Codelist: PAY003.'
+          x-sivi-code: 'PAY003'
+        channelSubset:
+          $ref: '#/components/schemas/OrderLineChannelSubset'
+          description: 'Codelist: OrderLineChannelSubset.'
+        big:
+          type: integer
+          format: int64
+          examples:
+            - 9007199254740993
+        ratio:
+          type: number
+          format: double
+        uid:
+          type: string
+          format: uuid
+        link:
+          type: string
+          format: uri
+        blob:
+          type: string
+          format: byte
+        secret:
+          type: string
+          format: password
+        day:
+          type: string
+          format: date
+    Address:
+      type: object
+      required:
+        - street
+        - houseNumber
+        - city
+      properties:
+        street:
+          type: string
+          description: 'Street name.'
+          examples:
+            - 'Main St'
+        houseNumber:
+          type: integer
+          format: int32
+          description: 'House number.'
+          examples:
+            - 12
+        city:
+          type: string
+          examples:
+            - 'Springfield'
+        country:
+          $ref: '#/components/schemas/EMPTY4'
+          description: 'Codelist: EMPTY4. Country code.'
+          x-sivi-code: 'EMPTY4'
+    Asset:
+      description: 'An item in the order.'
+      oneOf:
+        - $ref: '#/components/schemas/AssetCar'
+        - $ref: '#/components/schemas/AssetBicycle'
+      discriminator:
+        propertyName: entityType
+        mapping:
+          car: '#/components/schemas/AssetCar'
+          bicycle: '#/components/schemas/AssetBicycle'
+    AssetCar:
+      type: object
+      description: 'EntityType: car. A motor car.'
+      required:
+        - entityType
+        - make
+      properties:
+        entityType:
+          type: string
+          const: 'car'
+          description: 'Kind of object.'
+        make:
+          type: string
+          description: 'Brand.'
+          examples:
+            - 'Volvo'
+    AssetBicycle:
+      type: object
+      description: 'EntityType: bicycle. A bicycle.'
+      required:
+        - entityType
+      properties:
+        entityType:
+          type: string
+          const: 'bicycle'
+          description: 'Kind of object.'
+        frameSize:
+          type: integer
+          format: int32
+          description: 'Frame size in cm.'
+          examples:
+            - 54
+    Error:
+      type: object
+      description: 'Problem details.'
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          examples:
+            - 'E42'
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+    Fee:
+      oneOf:
+        - $ref: '#/components/schemas/FeeShipping'
+        - $ref: '#/components/schemas/FeeService'
+      discriminator:
+        propertyName: entityType
+        mapping:
+          shipping: '#/components/schemas/FeeShipping'
+          service: '#/components/schemas/FeeService'
+    FeeBase:
+      type: object
+      description: 'Shared attributes of all Fee subtypes.'
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: double
+          examples:
+            - 4.95
+    FeeShipping:
+      description: 'EntityType: shipping. Fee subtype: shipping'
+      allOf:
+        - $ref: '#/components/schemas/FeeBase'
+        - type: object
+          properties:
+            entityType:
+              type: string
+              const: 'shipping'
+            carrier:
+              type: string
+    FeeService:
+      description: 'EntityType: service. Fee subtype: service'
+      allOf:
+        - $ref: '#/components/schemas/FeeBase'
+        - type: object
+          properties:
+            entityType:
+              type: string
+              const: 'service'
+    Party:
+      description: 'Someone involved in an order.'
+      oneOf:
+        - $ref: '#/components/schemas/PartyPrivatePerson'
+        - $ref: '#/components/schemas/PartyCompany'
+      discriminator:
+        propertyName: entityType
+        mapping:
+          privatePerson: '#/components/schemas/PartyPrivatePerson'
+          company: '#/components/schemas/PartyCompany'
+    PartyBase:
+      type: object
+      description: 'Shared attributes of all Party subtypes.'
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: 'Full name.'
+          examples:
+            - 'Ada'
+        email:
+          type: string
+          format: email
+          description: 'Contact address.'
+          examples:
+            - 'ada@example.com'
+    PartyPrivatePerson:
+      description: 'EntityType: privatePerson. A natural person.'
+      allOf:
+        - $ref: '#/components/schemas/PartyBase'
+        - type: object
+          required:
+            - entityType
+          properties:
+            entityType:
+              type: string
+              const: 'privatePerson'
+              description: 'Identifies the kind of party.'
+            birthDate:
+              type: string
+              format: date
+              description: 'Date of birth.'
+              examples:
+                - '1990-12-10'
+            payment:
+              $ref: '#/components/schemas/PAY003'
+              description: 'Codelist: PAY003. Payment method.'
+              x-sivi-code: 'PAY003'
+    PartyCompany:
+      description: 'EntityType: company. A registered company (workspace text).'
+      allOf:
+        - $ref: '#/components/schemas/PartyBase'
+        - type: object
+          required:
+            - entityType
+            - registrationNumber
+          properties:
+            entityType:
+              type: string
+              const: 'company'
+              description: 'Identifies the kind of party.'
+            registrationNumber:
+              type: string
+              pattern: '^\d{8}$'
+              description: 'Chamber of commerce number.'
+              examples:
+                - '12345678'
+            payment:
+              $ref: '#/components/schemas/PAY003'
+              description: 'Codelist: PAY003. Payment method.'
+              x-sivi-code: 'PAY003'
+    Result:
+      type: object
+      description: 'Outcome of a request.'
+      required:
+        - id
+        - accepted
+      properties:
+        id:
+          type: string
+          examples:
+            - 'R-1'
+        accepted:
+          type: boolean
+          examples:
+            - true
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+    Channel:
+      x-schema-group: codelist
+      type: string
+      description: |
+        Sales channel.
+
+        | Code | Description |
+        |------|-------------|
+        | web | Web shop |
+        | store | In store |
+        | phone_order |  |
+      enum:
+        - 'web'
+        - 'store'
+        - 'phone_order'
+    Size:
+      x-schema-group: codelist
+      type: string
+      description: |
+        Garment size.
+
+        | Code | Description |
+        |------|-------------|
+        | S |  |
+        | M | Medium |
+        | x-large | élan |
+      enum:
+        - 'S'
+        - 'M'
+        - 'x-large'
+    OrderStatus:
+      x-schema-group: codelist
+      x-sivi-code: 'STA002'
+      type: string
+      description: |
+        Order status
+
+        | Code | Description |
+        |------|-------------|
+        | 01 | Open |
+        | 10 | Shipped |
+      enum:
+        - '01'
+        - '10'
+    Colour:
+      x-schema-group: codelist
+      x-sivi-code: 'CLR001'
+      type: string
+      description: |
+        Colours
+
+        | Code | Description | Notes |
+        |------|-------------|-------|
+        | 01 | Red |  |
+        | 02 | Green | Discontinued |
+        | 10 | Blue & white | Seasonal <limited> & rare |
+        | 9 | Black |  |
+        | A | Any |  |
+      enum:
+        - '01'
+        - '02'
+        - '10'
+        - '9'
+        - 'A'
+    PAY003:
+      x-schema-group: codelist
+      x-sivi-code: 'PAY003'
+      type: string
+      description: |
+        | Code | Description |
+        |------|-------------|
+        | card |  |
+        | cash | Cash |
+      enum:
+        - 'card'
+        - 'cash'
+    OrderLineChannelSubset:
+      x-schema-group: codelist
+      type: string
+      enum:
+        - 'web'
+    EMPTY4:
+      x-schema-group: codelist
+      x-sivi-code: 'EMPTY4'
+      type: string
+      description: 'SIVI codelist EMPTY4'
+      enum:

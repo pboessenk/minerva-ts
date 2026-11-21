@@ -1,0 +1,3 @@
+﻿Entity,Name,Type,Format,Constraints,Required,SIVI,Codelist,Technical name,Subtypes,Description,Example,Notes
+Note,text,string,,,Yes,,,,,,,
+Note,pinned,boolean,,default: false,,,,,,,,

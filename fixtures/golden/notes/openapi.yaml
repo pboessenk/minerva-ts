@@ -1,0 +1,18 @@
+openapi: '3.1.0'
+info:
+  title: 'API Model'
+  version: ''
+paths: {}
+components:
+  schemas:
+    Note:
+      type: object
+      description: 'A note.'
+      required:
+        - text
+      properties:
+        text:
+          type: string
+        pinned:
+          type: boolean
+          default: false

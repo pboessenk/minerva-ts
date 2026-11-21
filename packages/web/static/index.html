@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minerva</title>
+    <link rel="stylesheet" href="/assets/minerva.css">
+</head>
+<body>
+    <div class="sidebar">
+        <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar">«</button>
+        <div class="sidebar-icon-strip" id="sidebarIconStrip"></div>
+        <h2>Minerva</h2>
+        <div class="view-category-label">SIVI</div>
+        <div class="view-toggle" id="siviViewButtons">
+            <!-- Populated by core.js from registered views -->
+        </div>
+        <div class="view-category-label" id="apiCategoryLabel" style="display:none">APIs</div>
+        <div id="apiViewButtons">
+            <!-- Populated by API module registrations -->
+        </div>
+        <div class="graph-controls" id="graphControls">
+            <label>Layout</label>
+            <select class="layout-select" id="layoutSelect" onchange="changeLayout()">
+                <option value="cose">Force-directed (CoSE)</option>
+                <option value="circle">Circle</option>
+                <option value="concentric">Concentric (by connections)</option>
+                <option value="breadthfirst">Hierarchical</option>
+                <option value="grid">Grid</option>
+            </select>
+            <label style="margin-top:8px">Show edges for selected</label>
+            <div class="edge-filter">
+                <button class="edge-filter-btn ef-all active" id="efAll" onclick="setEdgeFilter('all')">All</button>
+                <button class="edge-filter-btn ef-children" id="efChildren" onclick="setEdgeFilter('children')">Children</button>
+                <button class="edge-filter-btn ef-parents" id="efParents" onclick="setEdgeFilter('parents')">Parents</button>
+            </div>
+            <button class="graph-btn" onclick="resetGraphView()">Reset Zoom</button>
+            <button class="graph-btn" onclick="toggleLabels()">Toggle Labels</button>
+        </div>
+        <input type="text" class="search-box" id="search" placeholder="Filter entities..." oninput="filterEntities()">
+        <div id="entityList" style="flex:1; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none;"></div>
+    </div>
+    <div class="main" id="main">
+        <div class="welcome" id="welcomeScreen">
+            <h1>Minerva</h1>
+            <p>Select an entity from the sidebar to explore its relationships</p>
+        </div>
+        <div id="listView"></div>
+        <div id="cy"></div>
+        <div id="caCy"></div>
+        <div class="graph-legend ca-graph-legend" id="caGraphLegend" style="display:none;">
+            <div class="gl-row"><div class="gl-node" style="background:#f85149;"></div> Root entity</div>
+            <div class="gl-row"><div class="gl-node" style="background:#58a6ff;"></div> SIVI-aligned</div>
+            <div class="gl-row"><div class="gl-node" style="background:#d29922;"></div> Draft / needs deep dive</div>
+            <div class="gl-row"><div class="gl-swatch" style="background:#8b949e;"></div> Parent → Child</div>
+            <div style="font-size:11px;color:#484f58;margin-top:8px;border-top:1px solid #21262d;padding-top:6px;">Click an entity to explore attributes</div>
+        </div>
+        <div class="ca-graph-zoom" id="caGraphZoom" style="display:none;">
+            <button onclick="graphScaleUp()" title="Increase node & text size">+</button>
+            <span id="caGraphZoomLabel">100%</span>
+            <button onclick="graphScaleDown()" title="Decrease node & text size">−</button>
+            <button onclick="graphScaleReset()" title="Reset to default size">⟲</button>
+        </div>
+        <div class="graph-legend" id="graphLegend">
+            <div class="gl-row"><div class="gl-node" style="background:#58a6ff;"></div> Selected entity</div>
+            <div class="gl-row"><div class="gl-node" style="background:#3fb950;"></div> Connected entity</div>
+            <div class="gl-row"><div class="gl-node" style="background:#484f58;"></div> Other entity</div>
+            <div class="gl-row"><div class="gl-swatch" style="background:#58a6ff;"></div> Child edge (nests under)</div>
+            <div class="gl-row"><div class="gl-swatch" style="background:#3fb950;"></div> Parent edge (is parent of)</div>
+            <div class="gl-row"><div class="gl-swatch" style="background:#d29922;"></div> Bidirectional</div>
+        </div>
+        <div class="graph-tooltip" id="graphTooltip"></div>
+<!-- MINERVA_FOOTER -->
+        <div class="cl-tooltip" id="clTooltip"></div>
+    </div>
+
+    <!-- MINERVA_BOOT -->
+    <script src="/assets/app.js"></script>
+</body>
+</html>

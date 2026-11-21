@@ -1,0 +1,21 @@
+{
+  "version": "",
+  "lastModified": "",
+  "entities": {
+    "Note": {
+      "description": "A note.",
+      "root": true,
+      "sections": [
+        {
+          "name": null,
+          "attributes": [
+            { "name": "text", "type": "string", "required": true },
+            { "name": "pinned", "type": "boolean", "required": false, "default": "false" }
+          ]
+        }
+      ]
+    }
+  },
+  "enums": {},
+  "operations": []
+}

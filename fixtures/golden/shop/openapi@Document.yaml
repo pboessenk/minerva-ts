@@ -1,0 +1,286 @@
+openapi: '3.1.0'
+info:
+  title: 'Shop API'
+  version: '2.1.0'
+  description: |
+    Orders, customers and deliveries.  
+    A second line follows directly.
+
+    A new paragraph.
+
+    &nbsp;  
+    &nbsp;  
+    After extra blank lines.
+tags:
+  - name: 'checkout'
+  - name: 'documents'
+  - name: 'orders'
+paths:
+  /orders:
+    post:
+      summary: 'Place an order'
+      description: |
+        Creates an order.  
+        Idempotent per X-Request-Id.
+
+        &nbsp;  
+        See the guide.
+      tags:
+        - 'orders'
+        - 'checkout'
+      parameters:
+        - name: X-Request-Id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: 'Idempotency key.'
+          examples:
+            basicOrder:
+              value: 'req-1'
+        - name: dryRun
+          in: query
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+            examples:
+              basicOrder:
+                summary: 'A basic order with one line'
+                value:
+                  orderId: "ORD-0001"
+                  createdAt: "2026-01-02T03:04:05Z"
+                  total: " 149.95 "
+                  quantity: "3"
+                  giftWrap: "TRUE"
+                  channel: "web"
+                  status: "01"
+                  tags: ["rush","fragile"]
+                  ratings: ["4.5","x","1e3"]
+                  customer: {"entityType":"privatePerson","name":"Ada \u003cLovelace\u003e \u0026 co","birthDate":"1990-12-10"}
+                  lines: [{"product":"SKU-1","quantity":"2","unitPrice":"9.99","big":"9007199254740993"}]
+                  delivery: {"street":"Main St","houseNumber":"12","city":"Springfield"}
+              company-order:
+                summary: 'Company order, it''s "urgent"'
+                value:
+                  orderId: "ORD-0002"
+                  total: 1.0
+                  quantity: 1e3
+                  giftWrap: false
+                  customer: {"entityType":"company","name":"Acme","registrationNumber":"12345678"}
+                  lines: []
+                  items: [{"entityType":"car","make":"Volvo"},{"entityType":"bicycle","frameSize":"54"}]
+                  fees: [{"entityType":"shipping","amount":"4.95","carrier":"DHL"}]
+                  note: "multi\nline"
+              odd-numbers:
+                summary: 'Numbers that are numbers only to some readers'
+                value:
+                  orderId: "ORD-0003"
+                  total: "1_000"
+                  quantity: "+5"
+                  lines: [{"quantity":"7","unitPrice":"Inf"}]
+                  giftWrap: "yes"
+      responses:
+        '201':
+          description: 'Created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                basicOrder:
+                  summary: 'A basic order with one line'
+                  value:
+                    id: "R-1"
+                    accepted: true
+                    warnings: []
+        '400':
+          description: 'Invalid order'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                company-order:
+                  summary: 'Company order, it''s "urgent"'
+                  value:
+                    code: "E42"
+                    message: "Total too high"
+                    details: ["a","b"]
+        '500':
+          description: 'It''s broken'
+  /orders/{orderId}/documents:
+    put:
+      summary: 'Attach documents'
+      tags:
+        - 'documents'
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            attach-one:
+              value: 'ORD-0001'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Document'
+            examples:
+              attach-one:
+                summary: 'Single document, wrapped into an array'
+                value:
+                  [
+                    {
+                      "fileName": "a.pdf",
+                      "content": "JVBERi0=",
+                      "kind": "invoice"
+                    }
+                  ]
+              attach-two:
+                summary: 'Two documents'
+                value:
+                  [
+                    {
+                      "fileName": "a.pdf",
+                      "content": "AA=="
+                    },
+                    {
+                      "fileName": "b.pdf",
+                      "content": "BB=="
+                    }
+                  ]
+      responses:
+        '207':
+          description: 'One result per document'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Result'
+              examples:
+                attach-one:
+                  summary: 'Single document, wrapped into an array'
+                  value:
+                    [
+                      {
+                        "id": "D-1",
+                        "accepted": true
+                      }
+                    ]
+                attach-two:
+                  summary: 'Two documents'
+                  value:
+                    [
+                      {
+                        "id": "D-2",
+                        "accepted": false
+                      }
+                    ]
+        '413':
+          description: 'Too large'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /channels:
+    get:
+      summary: 'List channels'
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: SortOrder
+          description: 'Sort direction.'
+          examples:
+            raw-literals:
+              value: 'asc'
+      responses:
+        '200':
+          description: 'Channels'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result'
+              examples:
+                raw-literals:
+                  summary: 'Literals as written'
+                  value:
+                    id: "x"
+                    nested: {"10":1,"9":2,"z":12345678901234567890,"a":-0,"b":1.50}
+components:
+  schemas:
+    Document:
+      type: object
+      description: 'An attachment.'
+      required:
+        - fileName
+        - content
+      properties:
+        fileName:
+          type: string
+          maxLength: 255
+          examples:
+            - 'invoice.pdf'
+        content:
+          type: string
+          format: byte
+          description: 'Base64 content.'
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+          description: 'Codelist: DocumentKind.'
+          examples:
+            - 'invoice'
+    Error:
+      type: object
+      description: 'Problem details.'
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          examples:
+            - 'E42'
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+    Result:
+      type: object
+      description: 'Outcome of a request.'
+      required:
+        - id
+        - accepted
+      properties:
+        id:
+          type: string
+          examples:
+            - 'R-1'
+        accepted:
+          type: boolean
+          examples:
+            - true
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+    DocumentKind:
+      x-schema-group: codelist
+      type: string
+      description: 'Kind of document.'
+      enum:
+        - 'invoice'
+        - 'receipt'

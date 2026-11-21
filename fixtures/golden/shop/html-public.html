@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shop API</title>
+<style>
+*,*::before,*::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1f2328;
+    background: #ffffff;
+}
+a { color: #0969da; text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12.5px;
+}
+
+
+#ml-app {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 100vh;
+}
+#ml-sidebar {
+    border-right: 1px solid #d1d9e0;
+    background: #f6f8fa;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+.ml-side-head {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #d1d9e0;
+}
+.ml-side-title { font-weight: 600; font-size: 15px; color: #1f2328; }
+.ml-side-meta { font-size: 11.5px; color: #59636e; margin-top: 2px; }
+
+.ml-search-wrap { padding: 10px 12px; border-bottom: 1px solid #eaeef2; }
+#ml-search {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #d1d9e0;
+    border-radius: 6px;
+    font: inherit;
+    background: #ffffff;
+}
+#ml-search:focus { outline: 2px solid #0969da; outline-offset: -1px; border-color: transparent; }
+
+#ml-toc { flex: 1; padding: 8px 0 24px; overflow: auto; }
+.ml-toc-section { margin-top: 8px; }
+.ml-toc-h {
+    padding: 6px 16px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #59636e;
+}
+.ml-toc-list { list-style: none; margin: 0; padding: 0; }
+.ml-toc-list li { margin: 0; }
+.ml-toc-list a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 16px;
+    color: #1f2328;
+    font-size: 13px;
+    border-left: 2px solid transparent;
+}
+.ml-toc-list a:hover { background: #eaeef2; text-decoration: none; }
+.ml-toc-list a.ml-active { background: #ddf4ff; border-left-color: #0969da; color: #0550ae; font-weight: 500; }
+.ml-toc-list a.ml-hidden { display: none; }
+#ml-toc .ml-hidden { display: none; }
+.ml-toc-list .ml-root-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #1f883d;
+    flex-shrink: 0;
+}
+
+
+#ml-main { padding: 24px 32px 80px; max-width: 1100px; }
+.ml-doc-head { padding-bottom: 18px; border-bottom: 1px solid #d1d9e0; margin-bottom: 24px; }
+.ml-doc-head h1 { margin: 0 0 6px; font-size: 26px; font-weight: 600; }
+.ml-subtitle { margin: 6px 0; color: #59636e; font-size: 15px; }
+.ml-doc-meta { margin: 8px 0 0; color: #59636e; font-size: 12.5px; }
+
+.ml-section { margin-top: 36px; }
+.ml-section > h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eaeef2;
+    scroll-margin-top: 12px;
+}
+
+
+.ml-entity {
+    border: 1px solid #d1d9e0;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    background: #ffffff;
+    overflow: hidden;
+    scroll-margin-top: 12px;
+}
+.ml-entity > summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    user-select: none;
+    background: #f6f8fa;
+    border-bottom: 1px solid transparent;
+}
+.ml-entity > summary::-webkit-details-marker { display: none; }
+.ml-entity[open] > summary { border-bottom-color: #d1d9e0; }
+.ml-entity > summary::before {
+    content: "▸";
+    color: #59636e;
+    font-size: 11px;
+    transition: transform 0.1s;
+    width: 10px;
+}
+.ml-entity[open] > summary::before { transform: rotate(90deg); }
+.ml-ent-name { font-weight: 600; font-size: 15px; color: #1f2328; }
+.ml-ent-count {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: #eaeef2;
+    color: #424a53;
+    font-size: 11px;
+    font-weight: 500;
+}
+.ml-ent-sivi-count {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: #ddf4ff;
+    color: #0550ae;
+    font-size: 11px;
+    font-weight: 500;
+}
+.ml-ent-meta { color: #59636e; font-size: 12.5px; margin-left: auto; }
+.ml-ent-body { padding: 14px 16px 18px; }
+.ml-ent-desc {
+    color: #8c959f;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-left: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1 1 200px;
+    min-width: 0;
+    align-self: center;
+}
+
+
+.ml-banners { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.ml-banner {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    border-left: 3px solid;
+    background: #f6f8fa;
+}
+.ml-banner-info    { border-left-color: #0969da; background: #ddf4ff; }
+.ml-banner-warning { border-left-color: #bf8700; background: #fff8c5; }
+.ml-banner-error   { border-left-color: #cf222e; background: #ffebe9; }
+
+
+.ml-subtype-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    background: #f6f8fa;
+    border: 1px solid #eaeef2;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+
+.ml-attrs {
+    border-top: 1px solid #eaeef2;
+}
+.ml-attr {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eaeef2;
+    scroll-margin-top: 12px;
+}
+.ml-attr.ml-hidden { display: none; }
+.ml-tree-node.ml-hidden, .ml-tree-ref.ml-hidden { display: none; }
+.ml-attr:target { background: #fff8c5; }
+.ml-attr-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+.ml-attr-body {
+    margin-top: 4px;
+    padding-left: 2px;
+    color: #424a53;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 80ch;
+}
+.ml-attr-section {
+    background: #f6f8fa;
+    color: #59636e;
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 6px 12px;
+    border-bottom: 1px solid #eaeef2;
+}
+.ml-attr-name { font-weight: 600; color: #1f2328; }
+.ml-attr-name .ml-req-mark { color: #cf222e; margin-left: 2px; }
+.ml-attr-type {
+    color: #0550ae;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: #ddf4ff;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.ml-attr-type.ml-link { cursor: pointer; }
+.ml-attr-type.ml-link:hover { background: #b6e3ff; text-decoration: none; }
+.ml-attr-fmt {
+    color: #0969da;
+    font-size: 11px;
+    margin-left: 4px;
+    opacity: 0.85;
+}
+.ml-attr-sivi {
+    color: #6e7781;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    background: #f6f8fa;
+    border: 1px solid #eaeef2;
+    padding: 0 6px;
+    border-radius: 4px;
+}
+.ml-attr-pattern {
+    display: inline-block;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+    color: #57606a;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    background: #f6f8fa;
+    border: 1px solid #eaeef2;
+    padding: 0 6px;
+    border-radius: 4px;
+}
+.ml-attr-constraint {
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: bottom;
+    color: #57606a;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    background: #f6f8fa;
+    border: 1px solid #eaeef2;
+    padding: 0 6px;
+    border-radius: 4px;
+}
+.ml-attr-cl {
+    display: inline-block;
+    padding: 1px 6px;
+    background: #fff8c5;
+    color: #7d4e00;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid #eac54f33;
+}
+.ml-attr-cl:hover { background: #fae17d; text-decoration: none; }
+.ml-attr-subs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-left: auto;
+}
+.ml-attr-desc { color: #424a53; }
+.ml-attr-ex {
+    background: #f6f8fa;
+    border: 1px solid #eaeef2;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    color: #59636e;
+}
+.ml-cell-dim { color: #8c959f; }
+
+
+.ml-method {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.ml-method        { color: #ffffff; }
+.ml-method-GET    { background: #1f883d; }
+.ml-method-POST   { background: #0969da; }
+.ml-method-PUT    { background: #9a6700; }
+.ml-method-PATCH  { background: #8250df; }
+.ml-method-DELETE { background: #cf222e; }
+
+
+.ml-subtype-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    background: #f6f8fa;
+    border: 1px solid #d1d9e0;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #59636e;
+    margin-right: 3px;
+}
+
+
+.ml-op {
+    border: 1px solid #d1d9e0;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    scroll-margin-top: 12px;
+}
+.ml-op-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f6f8fa;
+    border-bottom: 1px solid #d1d9e0;
+}
+.ml-op-path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2328;
+}
+.ml-op-summary { color: #59636e; font-size: 13px; margin-left: auto; }
+.ml-op-body { padding: 12px 16px; }
+.ml-op-row { margin-bottom: 8px; font-size: 13px; }
+.ml-op-row strong { display: inline-block; width: 130px; color: #59636e; font-weight: 500; }
+.ml-param-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+.ml-param-table th, .ml-param-table td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid #eaeef2;
+}
+.ml-param-table th { font-weight: 600; color: #59636e; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; background: #f6f8fa; }
+
+
+.ml-examples { margin-top: 12px; }
+.ml-example {
+    border: 1px solid #eaeef2;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+.ml-example > summary {
+    padding: 8px 12px;
+    cursor: pointer;
+    list-style: none;
+    background: #f6f8fa;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ml-example > summary::-webkit-details-marker { display: none; }
+.ml-example > summary::before { content: "▸"; color: #59636e; font-size: 11px; }
+.ml-example[open] > summary::before { content: "▾"; }
+.ml-example-name { font-weight: 600; }
+.ml-example-summary { color: #59636e; }
+.ml-example-body { padding: 10px 12px; }
+.ml-example-body h4 { margin: 8px 0 4px; font-size: 12px; color: #59636e; text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; }
+.ml-example-body pre {
+    background: #f6f8fa;
+    border: 1px solid #eaeef2;
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow: auto;
+    margin: 0;
+    max-height: 480px;
+}
+
+
+.ml-enum, .ml-codelist {
+    border: 1px solid #d1d9e0;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    scroll-margin-top: 12px;
+}
+.ml-enum > summary, .ml-codelist > summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    background: #f6f8fa;
+    border-bottom: 1px solid transparent;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ml-enum > summary::-webkit-details-marker,
+.ml-codelist > summary::-webkit-details-marker { display: none; }
+.ml-enum > summary::before,
+.ml-codelist > summary::before { content: "▸"; color: #59636e; font-size: 11px; }
+.ml-enum[open] > summary,
+.ml-codelist[open] > summary { border-bottom-color: #d1d9e0; }
+.ml-enum[open] > summary::before,
+.ml-codelist[open] > summary::before { content: "▾"; }
+.ml-enum-name, .ml-cl-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+.ml-enum-desc, .ml-cl-desc { color: #59636e; font-size: 13px; margin-left: auto; }
+.ml-enum-table, .ml-cl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.ml-enum-table th, .ml-cl-table th {
+    text-align: left;
+    padding: 6px 12px;
+    border-bottom: 1px solid #d1d9e0;
+    background: #ffffff;
+    font-weight: 600;
+    color: #59636e;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.ml-enum-table td, .ml-cl-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #eaeef2;
+    vertical-align: top;
+}
+.ml-enum-table tr:last-child td, .ml-cl-table tr:last-child td { border-bottom: none; }
+.ml-enum-table tr.ml-hidden, .ml-cl-table tr.ml-hidden { display: none; }
+.ml-cl-code, .ml-ev-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: #0550ae;
+}
+
+
+.ml-empty { color: #8c959f; font-style: italic; padding: 8px 0; }
+
+
+.ml-section-hidden { display: none; }
+.ml-entity-hidden, .ml-op-hidden, .ml-enum-hidden, .ml-codelist-hidden { display: none; }
+.ml-search-hidden { display: none !important; }
+
+
+.ml-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid #d1d9e0;
+}
+.ml-tabs:empty { display: none; }
+.ml-tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: #59636e;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    border-radius: 6px 6px 0 0;
+    text-decoration: none;
+    user-select: none;
+}
+.ml-tab:hover { color: #1f2328; background: #f6f8fa; }
+
+
+#ml-main:has(#sec-entities:target)  #ml-tabs .ml-tab[href="#sec-entities"],
+#ml-main:has(#sec-entities :target) #ml-tabs .ml-tab[href="#sec-entities"],
+#ml-main:has(#sec-ops:target)       #ml-tabs .ml-tab[href="#sec-ops"],
+#ml-main:has(#sec-ops :target)      #ml-tabs .ml-tab[href="#sec-ops"],
+#ml-main:has(#sec-enums:target)     #ml-tabs .ml-tab[href="#sec-enums"],
+#ml-main:has(#sec-enums :target)    #ml-tabs .ml-tab[href="#sec-enums"],
+#ml-main:has(#sec-codelists:target) #ml-tabs .ml-tab[href="#sec-codelists"],
+#ml-main:has(#sec-codelists :target) #ml-tabs .ml-tab[href="#sec-codelists"] {
+    color: #0969da;
+    border-bottom-color: #0969da;
+    font-weight: 600;
+}
+
+#ml-main:not(:has(:target)) #ml-tabs .ml-tab[href="#sec-entities"] {
+    color: #0969da;
+    border-bottom-color: #0969da;
+    font-weight: 600;
+}
+
+
+#ml-main:has(#ml-tabs) #ml-body .ml-section[data-tab] { display: none; }
+#ml-main:has(#ml-tabs) #ml-body .ml-section[data-tab]:target,
+#ml-main:has(#ml-tabs) #ml-body .ml-section[data-tab]:has(:target) { display: block; }
+#ml-main:has(#ml-tabs):not(:has(:target)) #ml-body .ml-section[data-tab="entities"] { display: block; }
+.ml-section[data-tab] > h2 { display: none; } 
+
+
+.ml-subr { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
+.ml-subtype-opt {
+    appearance: none;
+    font: inherit;
+    font-size: 12px;
+    color: #59636e;
+    background: #f6f8fa;
+    border: 1px solid #d1d9e0;
+    border-radius: 999px;
+    padding: 2px 10px;
+    cursor: pointer;
+    user-select: none;
+}
+.ml-subtype-opt:hover { background: #eaeef2; color: #1f2328; }
+.ml-subtype-bar-label { font-size: 12px; color: #59636e; margin-right: 2px; }
+
+
+
+
+.ml-tree-roots { display: flex; flex-direction: column; gap: 12px; }
+.ml-tree-node {
+    border: 1px solid #d1d9e0;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+.ml-tree-node[data-depth="0"] { background: #ffffff; }
+.ml-tree-node[data-depth="1"] { background: #fbfcfd; }
+.ml-tree-node[data-depth="2"] { background: #f6f8fa; }
+.ml-tree-node[data-depth="3"] { background: #f1f4f7; }
+.ml-tree-node[data-depth="4"] { background: #ecf0f3; }
+.ml-tree-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    user-select: none;
+}
+.ml-tree-summary::-webkit-details-marker { display: none; }
+.ml-tree-summary:hover { background: rgba(9, 105, 218, 0.04); }
+.ml-tree-chevron {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid #57606a;
+    transition: transform 0.12s ease-in-out;
+    flex-shrink: 0;
+}
+details[open] > .ml-tree-summary > .ml-tree-chevron { transform: rotate(90deg); }
+.ml-tree-body {
+    padding: 0 14px 14px;
+    border-top: 1px solid #eaeef2;
+}
+.ml-children {
+    margin-top: 14px;
+    padding-left: 14px;
+    border-left: 2px solid #eaeef2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+
+.ml-entity-card { margin-top: 10px; }
+
+
+.ml-card-badge, .ml-cond-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    background: #eaeef2;
+    color: #424a53;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.ml-cond-badge {
+    background: #fff8c5;
+    color: #6f5b00;
+    font-family: inherit;
+}
+
+
+.ml-tree-ref {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px dashed #d1d9e0;
+    border-radius: 6px;
+    background: #fbfcfd;
+    font-size: 13px;
+    color: #424a53;
+}
+.ml-tree-leader { color: #8c959f; font-size: 12px; }
+.ml-ref-name { font-weight: 600; }
+.ml-ref-where { font-style: italic; color: #59636e; font-size: 12px; }
+.ml-ref-missing { color: #cf222e; }
+
+
+.ml-orphans-h {
+    margin: 24px 0 8px;
+    font-size: 14px;
+    color: #59636e;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+.ml-orphans-note {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: #8c959f;
+    font-size: 12px;
+}
+
+
+.ml-toc-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 10px;
+}
+.ml-toc-tree .ml-toc-tree {
+    margin-left: 14px;
+    border-left: 1px solid #eaeef2;
+    padding-left: 6px;
+}
+.ml-toc-li { margin: 1px 0; }
+.ml-toc-branch > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    user-select: none;
+}
+.ml-toc-branch > summary::-webkit-details-marker { display: none; }
+.ml-toc-branch > summary:hover { background: #eaeef2; }
+.ml-toc-chevron {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 5px solid #8c959f;
+    transition: transform 0.1s;
+    flex-shrink: 0;
+}
+.ml-toc-branch[open] > summary > .ml-toc-chevron { transform: rotate(90deg); }
+.ml-toc-leaf {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px 2px 13px; 
+}
+.ml-toc-ref a { color: #57606a; }
+.ml-toc-ref-mark { color: #8c959f; font-size: 11px; }
+.ml-toc-missing a { color: #cf222e; }
+.ml-toc-h-sub {
+    margin-top: 8px;
+    font-size: 10.5px;
+    color: #8c959f;
+    padding: 2px 12px 4px;
+}
+#ml-toc li.ml-hidden { display: none; }
+</style>
+<style>#sub-Asset-__base__:checked ~ .ml-subtype-bar label[for="sub-Asset-__base__"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Asset-car:checked ~ .ml-subtype-bar label[for="sub-Asset-car"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Asset-bicycle:checked ~ .ml-subtype-bar label[for="sub-Asset-bicycle"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Asset-car:checked ~ .ml-entity-card .ml-attr[data-subs]:not([data-subs~="car"]):not([data-entitytype="1"]){display:none}
+#sub-Asset-car:checked ~ .ml-children > .ml-tree-node[data-subs]:not([data-subs~="car"]),#sub-Asset-car:checked ~ .ml-children > .ml-tree-ref[data-subs]:not([data-subs~="car"]){display:none}
+#sub-Asset-bicycle:checked ~ .ml-entity-card .ml-attr[data-subs]:not([data-subs~="bicycle"]):not([data-entitytype="1"]){display:none}
+#sub-Asset-bicycle:checked ~ .ml-children > .ml-tree-node[data-subs]:not([data-subs~="bicycle"]),#sub-Asset-bicycle:checked ~ .ml-children > .ml-tree-ref[data-subs]:not([data-subs~="bicycle"]){display:none}
+#sub-Fee-__base__:checked ~ .ml-subtype-bar label[for="sub-Fee-__base__"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Fee-shipping:checked ~ .ml-subtype-bar label[for="sub-Fee-shipping"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Fee-service:checked ~ .ml-subtype-bar label[for="sub-Fee-service"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Fee-shipping:checked ~ .ml-entity-card .ml-attr[data-subs]:not([data-subs~="shipping"]):not([data-entitytype="1"]){display:none}
+#sub-Fee-shipping:checked ~ .ml-children > .ml-tree-node[data-subs]:not([data-subs~="shipping"]),#sub-Fee-shipping:checked ~ .ml-children > .ml-tree-ref[data-subs]:not([data-subs~="shipping"]){display:none}
+#sub-Fee-service:checked ~ .ml-entity-card .ml-attr[data-subs]:not([data-subs~="service"]):not([data-entitytype="1"]){display:none}
+#sub-Fee-service:checked ~ .ml-children > .ml-tree-node[data-subs]:not([data-subs~="service"]),#sub-Fee-service:checked ~ .ml-children > .ml-tree-ref[data-subs]:not([data-subs~="service"]){display:none}
+#sub-Party-__base__:checked ~ .ml-subtype-bar label[for="sub-Party-__base__"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Party-privatePerson:checked ~ .ml-subtype-bar label[for="sub-Party-privatePerson"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Party-company:checked ~ .ml-subtype-bar label[for="sub-Party-company"]{background:#0969da;color:#fff;border-color:#0969da}
+#sub-Party-privatePerson:checked ~ .ml-entity-card .ml-attr[data-subs]:not([data-subs~="privatePerson"]):not([data-entitytype="1"]){display:none}
+#sub-Party-privatePerson:checked ~ .ml-children > .ml-tree-node[data-subs]:not([data-subs~="privatePerson"]),#sub-Party-privatePerson:checked ~ .ml-children > .ml-tree-ref[data-subs]:not([data-subs~="privatePerson"]){display:none}
+#sub-Party-company:checked ~ .ml-entity-card .ml-attr[data-subs]:not([data-subs~="company"]):not([data-entitytype="1"]){display:none}
+#sub-Party-company:checked ~ .ml-children > .ml-tree-node[data-subs]:not([data-subs~="company"]),#sub-Party-company:checked ~ .ml-children > .ml-tree-ref[data-subs]:not([data-subs~="company"]){display:none}
+</style>
+</head>
+<body>
+<div id="ml-app">
+    <aside id="ml-sidebar">
+        <div class="ml-side-head">
+            <div class="ml-side-title">Shop API</div>
+            <div class="ml-side-meta">v2.1.0 &middot; 2026-01-02T03:04:05.000Z</div>
+        </div>
+        <div class="ml-search-wrap" hidden>
+            <input id="ml-search" type="search" placeholder="Search entities, attributes, codes…" autocomplete="off" spellcheck="false">
+        </div>
+        <nav id="ml-toc"><div class="ml-toc-section"><div class="ml-toc-h">Entities</div><ul class="ml-toc-tree"><li class="ml-toc-li"><span class="ml-toc-leaf"><span class="ml-root-dot" title="root"></span><a href="#Document" data-toc="entity">Document</a></span></li><li class="ml-toc-li"><details class="ml-toc-branch" open><summary><span class="ml-toc-chevron" aria-hidden="true"></span><span class="ml-root-dot" title="root"></span><a href="#Order" data-toc="entity">Order</a></summary><ul class="ml-toc-tree"><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#OrderLine" data-toc="entity">OrderLine</a></span></li><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#Address" data-toc="entity">Address</a></span></li></ul></details></li><li class="ml-toc-li"><span class="ml-toc-leaf"><span class="ml-root-dot" title="root"></span><a href="#Result" data-toc="entity">Result</a></span></li></ul><div class="ml-toc-h ml-toc-h-sub">Orphans</div><ul class="ml-toc-tree"><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#Asset" data-toc="entity">Asset</a></span></li><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#Error" data-toc="entity">Error</a></span></li><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#Fee" data-toc="entity">Fee</a></span></li><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#FeeBase" data-toc="entity">FeeBase</a></span></li><li class="ml-toc-li"><details class="ml-toc-branch" open><summary><span class="ml-toc-chevron" aria-hidden="true"></span><a href="#Party" data-toc="entity">Party</a></summary><ul class="ml-toc-tree"><li class="ml-toc-li ml-toc-ref"><a href="#Address" data-toc="entity">Address <span class="ml-toc-ref-mark" title="reference">&#8599;</span></a></li></ul></details></li><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#Zeta" data-toc="entity">Zeta</a></span></li><li class="ml-toc-li"><span class="ml-toc-leaf"><a href="#alpha" data-toc="entity">alpha</a></span></li></ul></div><div class="ml-toc-section"><div class="ml-toc-h">Operations</div><ul class="ml-toc-list"><li><a href="#op-createOrder" data-toc="op">POST /orders</a></li><li><a href="#op-getOrder" data-toc="op">GET /orders/{orderId}</a></li><li><a href="#op-putAttachments" data-toc="op">PUT /orders/{orderId}/documents</a></li><li><a href="#op-deleteOrder" data-toc="op">DELETE /orders/{orderId}</a></li><li><a href="#op-listChannels" data-toc="op">GET /channels</a></li></ul></div><div class="ml-toc-section"><div class="ml-toc-h">Enums</div><ul class="ml-toc-list"><li><a href="#enum-Channel" data-toc="enum">Channel</a></li><li><a href="#enum-DocumentKind" data-toc="enum">DocumentKind</a></li><li><a href="#enum-Legacy" data-toc="enum">Legacy</a></li><li><a href="#enum-Size" data-toc="enum">Size</a></li><li><a href="#enum-SortOrder" data-toc="enum">SortOrder</a></li></ul></div><div class="ml-toc-section"><div class="ml-toc-h">Codelists</div><ul class="ml-toc-list"><li><a href="#cl-Colour" data-toc="codelist">Colour</a></li><li><a href="#cl-EMPTY4" data-toc="codelist">EMPTY4</a></li><li><a href="#cl-OrderLineChannelSubset" data-toc="codelist">OrderLineChannelSubset</a></li><li><a href="#cl-OrderStatus" data-toc="codelist">OrderStatus</a></li><li><a href="#cl-PAY003" data-toc="codelist">PAY003</a></li></ul></div></nav>
+    </aside>
+    <main id="ml-main">
+        <header class="ml-doc-head">
+            <h1>Shop API</h1>
+            <p class="ml-subtitle">Orders, customers and deliveries.
+A second line follows directly.
+
+A new paragraph.
+
+
+
+After extra blank lines.</p>
+            <p class="ml-doc-meta">Generated 2030-01-02 03:04 UTC &middot; 12 entities &middot; 5 operations &middot; 5 enums</p>
+        </header>
+        <nav id="ml-tabs" class="ml-tabs" role="tablist"><a class="ml-tab" href="#sec-entities">Entities</a><a class="ml-tab" href="#sec-ops">Operations</a><a class="ml-tab" href="#sec-enums">Enums</a><a class="ml-tab" href="#sec-codelists">Codelists</a></nav>
+        <div id="ml-body"><section class="ml-section" id="sec-ops" data-tab="ops"><h2>Operations</h2><div class="ml-op" id="op-createOrder"><div class="ml-op-head"><span class="ml-method ml-method-POST">POST</span><span class="ml-op-path">/orders</span><span class="ml-op-summary">Place an order</span></div><div class="ml-op-body"><p>Creates an order.
+Idempotent per X-Request-Id.
+
+
+See the guide.</p><div class="ml-op-row"><strong>Request body:</strong> <a href="#Order">Order</a></div><div class="ml-op-row"><strong>Response 201:</strong> Created &rarr; <a href="#Result">Result</a></div><div class="ml-op-row"><strong>Response 400:</strong> Invalid order &rarr; <a href="#Error">Error</a></div><div class="ml-op-row"><strong>Response 500:</strong> It&#39;s broken</div><div class="ml-op-row"><strong>Parameters:</strong></div><table class="ml-param-table"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody><tr><td><code>X-Request-Id</code></td><td>header</td><td>string</td><td>yes</td><td>Idempotency key.</td></tr><tr><td><code>dryRun</code></td><td>query</td><td>boolean</td><td></td><td></td></tr></tbody></table><div class="ml-examples"><h4 style="margin:14px 0 6px;font-size:12px;color:#59636e;text-transform:uppercase;letter-spacing:0.03em;">Examples (4)</h4><details class="ml-example"><summary><span class="ml-example-name">basicOrder</span><span class="ml-example-summary">&mdash; A basic order with one line</span></summary><div class="ml-example-body"><h4>Parameters</h4><pre>{
+  &#34;X-Request-Id&#34;: &#34;req-1&#34;,
+  &#34;dryRun&#34;: &#34;&#34;
+}</pre><h4>Request</h4><pre>{
+  &#34;channel&#34;: &#34;web&#34;,
+  &#34;createdAt&#34;: &#34;2026-01-02T03:04:05Z&#34;,
+  &#34;customer&#34;: {
+    &#34;birthDate&#34;: &#34;1990-12-10&#34;,
+    &#34;entityType&#34;: &#34;privatePerson&#34;,
+    &#34;name&#34;: &#34;Ada \u003cLovelace\u003e \u0026 co&#34;
+  },
+  &#34;delivery&#34;: {
+    &#34;city&#34;: &#34;Springfield&#34;,
+    &#34;houseNumber&#34;: &#34;12&#34;,
+    &#34;street&#34;: &#34;Main St&#34;
+  },
+  &#34;giftWrap&#34;: &#34;TRUE&#34;,
+  &#34;lines&#34;: [
+    {
+      &#34;big&#34;: &#34;9007199254740993&#34;,
+      &#34;product&#34;: &#34;SKU-1&#34;,
+      &#34;quantity&#34;: &#34;2&#34;,
+      &#34;unitPrice&#34;: &#34;9.99&#34;
+    }
+  ],
+  &#34;orderId&#34;: &#34;ORD-0001&#34;,
+  &#34;quantity&#34;: &#34;3&#34;,
+  &#34;ratings&#34;: [
+    &#34;4.5&#34;,
+    &#34;x&#34;,
+    &#34;1e3&#34;
+  ],
+  &#34;status&#34;: &#34;01&#34;,
+  &#34;tags&#34;: [
+    &#34;rush&#34;,
+    &#34;fragile&#34;
+  ],
+  &#34;total&#34;: &#34; 149.95 &#34;
+}</pre><h4>Response (201)</h4><pre>{
+  &#34;accepted&#34;: &#34;true&#34;,
+  &#34;id&#34;: &#34;R-1&#34;,
+  &#34;warnings&#34;: []
+}</pre></div></details><details class="ml-example"><summary><span class="ml-example-name">company-order</span><span class="ml-example-summary">&mdash; Company order, it&#39;s &#34;urgent&#34;</span></summary><div class="ml-example-body"><h4>Request</h4><pre>{
+  &#34;customer&#34;: {
+    &#34;entityType&#34;: &#34;company&#34;,
+    &#34;name&#34;: &#34;Acme&#34;,
+    &#34;registrationNumber&#34;: &#34;12345678&#34;
+  },
+  &#34;fees&#34;: [
+    {
+      &#34;amount&#34;: &#34;4.95&#34;,
+      &#34;carrier&#34;: &#34;DHL&#34;,
+      &#34;entityType&#34;: &#34;shipping&#34;
+    }
+  ],
+  &#34;giftWrap&#34;: false,
+  &#34;items&#34;: [
+    {
+      &#34;entityType&#34;: &#34;car&#34;,
+      &#34;make&#34;: &#34;Volvo&#34;
+    },
+    {
+      &#34;entityType&#34;: &#34;bicycle&#34;,
+      &#34;frameSize&#34;: &#34;54&#34;
+    }
+  ],
+  &#34;lines&#34;: [],
+  &#34;note&#34;: &#34;multi\nline&#34;,
+  &#34;orderId&#34;: &#34;ORD-0002&#34;,
+  &#34;quantity&#34;: 1000,
+  &#34;total&#34;: 1
+}</pre><h4>Response (400)</h4><pre>{
+  &#34;code&#34;: &#34;E42&#34;,
+  &#34;details&#34;: [
+    &#34;a&#34;,
+    &#34;b&#34;
+  ],
+  &#34;message&#34;: &#34;Total too high&#34;
+}</pre></div></details><details class="ml-example"><summary><span class="ml-example-name">odd-numbers</span><span class="ml-example-summary">&mdash; Numbers that are numbers only to some readers</span></summary><div class="ml-example-body"><h4>Request</h4><pre>{
+  &#34;giftWrap&#34;: &#34;yes&#34;,
+  &#34;lines&#34;: [
+    {
+      &#34;quantity&#34;: &#34;7&#34;,
+      &#34;unitPrice&#34;: &#34;Inf&#34;
+    }
+  ],
+  &#34;orderId&#34;: &#34;ORD-0003&#34;,
+  &#34;quantity&#34;: &#34;+5&#34;,
+  &#34;total&#34;: &#34;1_000&#34;
+}</pre></div></details><details class="ml-example"><summary><span class="ml-example-name">empty</span><span class="ml-example-summary">&mdash; Nothing filled in</span></summary><div class="ml-example-body"></div></details></div></div></div><div class="ml-op" id="op-getOrder"><div class="ml-op-head"><span class="ml-method ml-method-GET">GET</span><span class="ml-op-path">/orders/{orderId}</span><span class="ml-op-summary">Get an order</span></div><div class="ml-op-body"><div class="ml-op-row"><strong>Response 200:</strong> The order &rarr; <a href="#Order">Order</a></div><div class="ml-op-row"><strong>Response 404:</strong> Not found &rarr; <a href="#Error">Error</a></div><div class="ml-op-row"><strong>Parameters:</strong></div><table class="ml-param-table"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody><tr><td><code>orderId</code></td><td>path</td><td>string</td><td>yes</td><td>The order.</td></tr></tbody></table><div class="ml-examples"><h4 style="margin:14px 0 6px;font-size:12px;color:#59636e;text-transform:uppercase;letter-spacing:0.03em;">Examples (2)</h4><details class="ml-example"><summary><span class="ml-example-name">fetchOrder</span><span class="ml-example-summary">&mdash; Fetch</span></summary><div class="ml-example-body"><h4>Parameters</h4><pre>{
+  &#34;orderId&#34;: &#34;ORD-0001&#34;
+}</pre><h4>Response (200)</h4><pre>{
+  &#34;customer&#34;: {
+    &#34;entityType&#34;: &#34;company&#34;,
+    &#34;name&#34;: &#34;Acme&#34;
+  },
+  &#34;orderId&#34;: &#34;ORD-0001&#34;,
+  &#34;total&#34;: &#34;10&#34;
+}</pre></div></details><details class="ml-example"><summary><span class="ml-example-name">fetch-missing</span><span class="ml-example-summary">&mdash; Missing</span></summary><div class="ml-example-body"><h4>Parameters</h4><pre>{
+  &#34;orderId&#34;: &#34;nope&#34;
+}</pre><h4>Response (404)</h4><pre>{
+  &#34;code&#34;: &#34;E404&#34;,
+  &#34;message&#34;: &#34;No such order&#34;
+}</pre></div></details></div></div></div><div class="ml-op" id="op-putAttachments"><div class="ml-op-head"><span class="ml-method ml-method-PUT">PUT</span><span class="ml-op-path">/orders/{orderId}/documents</span><span class="ml-op-summary">Attach documents</span></div><div class="ml-op-body"><div class="ml-op-row"><strong>Request body:</strong> <a href="#Document">Document[]</a></div><div class="ml-op-row"><strong>Response 207:</strong> One result per document &rarr; <a href="#Result">Result[]</a></div><div class="ml-op-row"><strong>Response 413:</strong> Too large &rarr; <a href="#Error">Error</a></div><div class="ml-op-row"><strong>Parameters:</strong></div><table class="ml-param-table"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody><tr><td><code>orderId</code></td><td>path</td><td>string</td><td>yes</td><td></td></tr></tbody></table><div class="ml-examples"><h4 style="margin:14px 0 6px;font-size:12px;color:#59636e;text-transform:uppercase;letter-spacing:0.03em;">Examples (2)</h4><details class="ml-example"><summary><span class="ml-example-name">attach-one</span><span class="ml-example-summary">&mdash; Single document, wrapped into an array</span></summary><div class="ml-example-body"><h4>Parameters</h4><pre>{
+  &#34;orderId&#34;: &#34;ORD-0001&#34;
+}</pre><h4>Request</h4><pre>{
+  &#34;content&#34;: &#34;JVBERi0=&#34;,
+  &#34;fileName&#34;: &#34;a.pdf&#34;,
+  &#34;kind&#34;: &#34;invoice&#34;
+}</pre><h4>Response</h4><pre>[
+  {
+    &#34;accepted&#34;: &#34;TRUE&#34;,
+    &#34;id&#34;: &#34;D-1&#34;
+  }
+]</pre></div></details><details class="ml-example"><summary><span class="ml-example-name">attach-two</span><span class="ml-example-summary">&mdash; Two documents</span></summary><div class="ml-example-body"><h4>Request</h4><pre>[
+  {
+    &#34;content&#34;: &#34;AA==&#34;,
+    &#34;fileName&#34;: &#34;a.pdf&#34;
+  },
+  {
+    &#34;content&#34;: &#34;BB==&#34;,
+    &#34;fileName&#34;: &#34;b.pdf&#34;
+  }
+]</pre><h4>Response</h4><pre>{
+  &#34;accepted&#34;: &#34;false&#34;,
+  &#34;id&#34;: &#34;D-2&#34;
+}</pre></div></details></div></div></div><div class="ml-op" id="op-deleteOrder"><div class="ml-op-head"><span class="ml-method ml-method-DELETE">DELETE</span><span class="ml-op-path">/orders/{orderId}</span></div><div class="ml-op-body"><div class="ml-op-row"><strong>Response 204:</strong> Deleted</div><div class="ml-op-row"><strong>Parameters:</strong></div><table class="ml-param-table"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody><tr><td><code>orderId</code></td><td>path</td><td>string</td><td>yes</td><td></td></tr></tbody></table></div></div><div class="ml-op" id="op-listChannels"><div class="ml-op-head"><span class="ml-method ml-method-GET">GET</span><span class="ml-op-path">/channels</span><span class="ml-op-summary">List channels</span></div><div class="ml-op-body"><div class="ml-op-row"><strong>Response 200:</strong> Channels &rarr; <a href="#Result">Result</a></div><div class="ml-op-row"><strong>Parameters:</strong></div><table class="ml-param-table"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody><tr><td><code>sort</code></td><td>query</td><td>SortOrder</td><td></td><td>Sort direction.</td></tr></tbody></table><div class="ml-examples"><h4 style="margin:14px 0 6px;font-size:12px;color:#59636e;text-transform:uppercase;letter-spacing:0.03em;">Examples (1)</h4><details class="ml-example"><summary><span class="ml-example-name">raw-literals</span><span class="ml-example-summary">&mdash; Literals as written</span></summary><div class="ml-example-body"><h4>Parameters</h4><pre>{
+  &#34;sort&#34;: &#34;asc&#34;
+}</pre><h4>Response (200)</h4><pre>{
+  &#34;id&#34;: &#34;x&#34;,
+  &#34;nested&#34;: {
+    &#34;10&#34;: 1,
+    &#34;9&#34;: 2,
+    &#34;a&#34;: -0,
+    &#34;b&#34;: 1.5,
+    &#34;z&#34;: 12345678901234567000
+  }
+}</pre></div></details></div></div></div></section><section class="ml-section" id="sec-entities" data-tab="entities"><h2>Entities</h2><div class="ml-tree-roots"><details class="ml-tree-node" id="Document" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-root-dot" title="Root entity"></span><span class="ml-ent-name">Document</span><span class="ml-ent-count" title="attribute count">3</span><span class="ml-ent-desc">An attachment.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-Document-fileName" data-name="fileName"><div class="ml-attr-head"><span class="ml-attr-name">fileName<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-constraint" title="maxLength">maxLength 255</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">invoice.pdf</code></div></div><div class="ml-attr" id="attr-Document-content" data-name="content"><div class="ml-attr-head"><span class="ml-attr-name">content<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;byte</span></span></div><div class="ml-attr-body"><span class="ml-attr-desc">Base64 content.</span></div></div><div class="ml-attr" id="attr-Document-kind" data-name="kind"><div class="ml-attr-head"><span class="ml-attr-name">kind</span><a class="ml-attr-type ml-link" href="#enum-DocumentKind">DocumentKind</a></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: DocumentKind.</span> <code class="ml-attr-ex" title="example">invoice</code></div></div></div></div></div></details><details class="ml-tree-node" id="Order" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-root-dot" title="Root entity"></span><span class="ml-ent-name">Order</span><span class="ml-ent-count" title="attribute count">17</span><span class="ml-ent-sivi-count" title="SIVI references">4 SIVI</span><span class="ml-ent-desc">A customer&#39;s order.
+It holds lines and a delivery.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-Order-orderId" data-name="orderId"><div class="ml-attr-head"><span class="ml-attr-name">orderId<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-pattern" title="pattern: ^[A-Z]{3}-\d{4}$">^[A-Z]{3}-\d{4}$</span><span class="ml-attr-constraint" title="minLength">minLength 8</span><span class="ml-attr-constraint" title="maxLength">maxLength 8</span><span class="ml-attr-sivi" title="SIVI reference">order.orderId</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Identifier chosen by the client.</span> <code class="ml-attr-ex" title="example">ORD-0001</code></div></div><div class="ml-attr" id="attr-Order-createdAt" data-name="createdAt"><div class="ml-attr-head"><span class="ml-attr-name">createdAt<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;date-time</span></span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">2026-01-02T03:04:05Z</code></div></div><div class="ml-attr" id="attr-Order-deliveryDate" data-name="deliveryDate"><div class="ml-attr-head"><span class="ml-attr-name">deliveryDate</span><span class="ml-attr-type">Date</span><span class="ml-attr-sivi" title="SIVI reference">order.deliveryDate</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Requested date.</span> <code class="ml-attr-ex" title="example">2026-02-01</code></div></div><div class="ml-attr" id="attr-Order-total" data-name="total"><div class="ml-attr-head"><span class="ml-attr-name">total<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">number</span><span class="ml-attr-constraint" title="minimum">minimum 0</span><span class="ml-attr-constraint" title="exclusiveMaximum">exclusiveMaximum 1000000</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Total in euros, it&#39;s &#34;gross&#34;.</span> <code class="ml-attr-ex" title="example">149.95</code></div></div><div class="ml-attr" id="attr-Order-quantity" data-name="quantity"><div class="ml-attr-head"><span class="ml-attr-name">quantity</span><span class="ml-attr-type">integer</span><span class="ml-attr-constraint" title="minimum">minimum 1</span><span class="ml-attr-constraint" title="maximum">maximum 99</span><span class="ml-attr-constraint" title="default">default 1</span><span class="ml-attr-sivi" title="SIVI reference">order.quantity</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Number of items.</span> <code class="ml-attr-ex" title="example">3</code></div></div><div class="ml-attr" id="attr-Order-giftWrap" data-name="giftWrap"><div class="ml-attr-head"><span class="ml-attr-name">giftWrap</span><span class="ml-attr-type">boolean</span><span class="ml-attr-constraint" title="default">default true</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Wrap as a gift.</span> <code class="ml-attr-ex" title="example">False</code></div></div><div class="ml-attr" id="attr-Order-channel" data-name="channel"><div class="ml-attr-head"><span class="ml-attr-name">channel<span class="ml-req-mark" title="required">*</span></span><a class="ml-attr-type ml-link" href="#enum-Channel">Channel</a></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: Channel. Where the order came from.</span> <code class="ml-attr-ex" title="example">web</code></div></div><div class="ml-attr" id="attr-Order-status" data-name="status"><div class="ml-attr-head"><span class="ml-attr-name">status<span class="ml-req-mark" title="required">*</span></span><a class="ml-attr-type ml-link" href="#cl-OrderStatus">OrderStatus</a><span class="ml-attr-sivi" title="SIVI reference">order.status</span><span class="ml-attr-cl" title="SIVI codelist">STA002</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: OrderStatus. Status.</span> <code class="ml-attr-ex" title="example">01</code></div></div><div class="ml-attr" id="attr-Order-colour" data-name="colour"><div class="ml-attr-head"><span class="ml-attr-name">colour</span><a class="ml-attr-type ml-link" href="#cl-Colour">Colour</a><span class="ml-attr-cl" title="SIVI codelist">CLR001</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: Colour. Preferred colour.</span></div></div><div class="ml-attr" id="attr-Order-tags" data-name="tags"><div class="ml-attr-head"><span class="ml-attr-name">tags</span><span class="ml-attr-type">string[]</span><span class="ml-attr-pattern" title="pattern: ^[a-z]+$">^[a-z]+$</span><span class="ml-attr-constraint" title="maxLength">maxLength 20</span><span class="ml-attr-constraint" title="minItems">minItems 1</span><span class="ml-attr-constraint" title="maxItems">maxItems 5</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Free tags.</span> <code class="ml-attr-ex" title="example">rush</code></div></div><div class="ml-attr" id="attr-Order-sizes" data-name="sizes"><div class="ml-attr-head"><span class="ml-attr-name">sizes</span><a class="ml-attr-type ml-link" href="#enum-Size">Size[]</a></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: Size.</span></div></div><div class="ml-attr" id="attr-Order-ratings" data-name="ratings"><div class="ml-attr-head"><span class="ml-attr-name">ratings</span><span class="ml-attr-type">number[]</span><span class="ml-attr-constraint" title="minimum">minimum 0.5</span><span class="ml-attr-constraint" title="maximum">maximum 1000000000000000000000</span><span class="ml-attr-constraint" title="minItems">minItems 0</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Ratings.</span> <code class="ml-attr-ex" title="example">4.5</code></div></div><div class="ml-attr" id="attr-Order-customer" data-name="customer"><div class="ml-attr-head"><span class="ml-attr-name">customer<span class="ml-req-mark" title="required">*</span></span><a class="ml-attr-type ml-link" href="#Party">Party</a></div></div><div class="ml-attr" id="attr-Order-lines" data-name="lines"><div class="ml-attr-head"><span class="ml-attr-name">lines<span class="ml-req-mark" title="required">*</span></span><a class="ml-attr-type ml-link" href="#OrderLine">OrderLine[]</a><span class="ml-attr-constraint" title="minItems">minItems 1</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Order lines.</span></div></div><div class="ml-attr" id="attr-Order-delivery" data-name="delivery"><div class="ml-attr-head"><span class="ml-attr-name">delivery</span><a class="ml-attr-type ml-link" href="#Address">Address</a></div></div><div class="ml-attr" id="attr-Order-items" data-name="items"><div class="ml-attr-head"><span class="ml-attr-name">items</span><a class="ml-attr-type ml-link" href="#Asset">Asset[]</a></div></div><div class="ml-attr" id="attr-Order-fees" data-name="fees"><div class="ml-attr-head"><span class="ml-attr-name">fees</span><a class="ml-attr-type ml-link" href="#Fee">Fee[]</a></div></div></div></div><div class="ml-children"><details class="ml-tree-node" id="OrderLine" data-depth="1"><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">OrderLine</span><span class="ml-card-badge" title="cardinality">1..*</span><span class="ml-ent-count" title="attribute count">14</span><span class="ml-ent-desc">One product line.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-OrderLine-product" data-name="product"><div class="ml-attr-head"><span class="ml-attr-name">product<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Stock keeping unit.</span> <code class="ml-attr-ex" title="example">SKU-1</code></div></div><div class="ml-attr" id="attr-OrderLine-quantity" data-name="quantity"><div class="ml-attr-head"><span class="ml-attr-name">quantity<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">int</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">2</code></div></div><div class="ml-attr" id="attr-OrderLine-unitPrice" data-name="unitPrice"><div class="ml-attr-head"><span class="ml-attr-name">unitPrice<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">number<span class="ml-attr-fmt">&middot;float</span></span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">9.99</code></div></div><div class="ml-attr" id="attr-OrderLine-discount" data-name="discount"><div class="ml-attr-head"><span class="ml-attr-name">discount</span><span class="ml-attr-type">number</span><span class="ml-attr-constraint" title="exclusiveMinimum">exclusiveMinimum 0</span><span class="ml-attr-constraint" title="maximum">maximum 100</span><span class="ml-attr-constraint" title="default">default 0.5</span></div></div><div class="ml-attr" id="attr-OrderLine-colours" data-name="colours"><div class="ml-attr-head"><span class="ml-attr-name">colours</span><a class="ml-attr-type ml-link" href="#cl-Colour">Colour[]</a><span class="ml-attr-constraint" title="minItems">minItems 1</span><span class="ml-attr-cl" title="SIVI codelist">CLR001</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: Colour.</span> <code class="ml-attr-ex" title="example">02</code></div></div><div class="ml-attr" id="attr-OrderLine-altPayment" data-name="altPayment"><div class="ml-attr-head"><span class="ml-attr-name">altPayment</span><a class="ml-attr-type ml-link" href="#cl-PAY003">PAY003</a><span class="ml-attr-cl" title="SIVI codelist">PAY003</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: PAY003.</span></div></div><div class="ml-attr" id="attr-OrderLine-channelSubset" data-name="channelSubset"><div class="ml-attr-head"><span class="ml-attr-name">channelSubset</span><a class="ml-attr-type ml-link" href="#cl-OrderLineChannelSubset">OrderLineChannelSubset</a></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: OrderLineChannelSubset.</span></div></div><div class="ml-attr" id="attr-OrderLine-big" data-name="big"><div class="ml-attr-head"><span class="ml-attr-name">big</span><span class="ml-attr-type">integer<span class="ml-attr-fmt">&middot;int64</span></span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">9007199254740993</code></div></div><div class="ml-attr" id="attr-OrderLine-ratio" data-name="ratio"><div class="ml-attr-head"><span class="ml-attr-name">ratio</span><span class="ml-attr-type">number<span class="ml-attr-fmt">&middot;double</span></span></div></div><div class="ml-attr" id="attr-OrderLine-uid" data-name="uid"><div class="ml-attr-head"><span class="ml-attr-name">uid</span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;uuid</span></span></div></div><div class="ml-attr" id="attr-OrderLine-link" data-name="link"><div class="ml-attr-head"><span class="ml-attr-name">link</span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;uri</span></span></div></div><div class="ml-attr" id="attr-OrderLine-blob" data-name="blob"><div class="ml-attr-head"><span class="ml-attr-name">blob</span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;byte</span></span></div></div><div class="ml-attr" id="attr-OrderLine-secret" data-name="secret"><div class="ml-attr-head"><span class="ml-attr-name">secret</span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;password</span></span></div></div><div class="ml-attr" id="attr-OrderLine-day" data-name="day"><div class="ml-attr-head"><span class="ml-attr-name">day</span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;date</span></span></div></div></div></div></div></details><details class="ml-tree-node" id="Address" data-depth="1"><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">Address</span><span class="ml-card-badge" title="cardinality">0..1</span><span class="ml-ent-count" title="attribute count">4</span><span class="ml-ent-sivi-count" title="SIVI references">4 SIVI</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr-section">Street</div><div class="ml-attr" id="attr-Address-street" data-name="street"><div class="ml-attr-head"><span class="ml-attr-name">street<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-sivi" title="SIVI reference">address.street</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Street name.</span> <code class="ml-attr-ex" title="example">Main St</code></div></div><div class="ml-attr" id="attr-Address-houseNumber" data-name="houseNumber"><div class="ml-attr-head"><span class="ml-attr-name">houseNumber<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">integer</span><span class="ml-attr-sivi" title="SIVI reference">Address.HouseNumber</span></div><div class="ml-attr-body"><span class="ml-attr-desc">House number.</span> <code class="ml-attr-ex" title="example">12</code></div></div><div class="ml-attr-section">Location &amp; region</div><div class="ml-attr" id="attr-Address-city" data-name="city"><div class="ml-attr-head"><span class="ml-attr-name">city<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-sivi" title="SIVI reference">address.city</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">Springfield</code></div></div><div class="ml-attr" id="attr-Address-country" data-name="country"><div class="ml-attr-head"><span class="ml-attr-name">country</span><a class="ml-attr-type ml-link" href="#cl-EMPTY4">EMPTY4</a><span class="ml-attr-sivi" title="SIVI reference">address.country</span><span class="ml-attr-cl" title="SIVI codelist">EMPTY4</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: EMPTY4. Country code.</span></div></div></div></div></div></details></div></div></details><details class="ml-tree-node" id="Result" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-root-dot" title="Root entity"></span><span class="ml-ent-name">Result</span><span class="ml-ent-count" title="attribute count">3</span><span class="ml-ent-desc">Outcome of a request.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-Result-id" data-name="id"><div class="ml-attr-head"><span class="ml-attr-name">id<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">R-1</code></div></div><div class="ml-attr" id="attr-Result-accepted" data-name="accepted"><div class="ml-attr-head"><span class="ml-attr-name">accepted<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">boolean</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">true</code></div></div><div class="ml-attr" id="attr-Result-warnings" data-name="warnings"><div class="ml-attr-head"><span class="ml-attr-name">warnings</span><a class="ml-attr-type ml-link" href="#Error">Error[]</a></div></div></div></div></div></details></div><h3 class="ml-orphans-h">Orphans <span class="ml-orphans-note">(not reachable from any root)</span></h3><div class="ml-tree-roots"><details class="ml-tree-node" id="Asset" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">Asset</span><span class="ml-ent-count" title="attribute count">3</span><span class="ml-ent-sivi-count" title="SIVI references">3 SIVI</span><span class="ml-ent-desc">An item in the order.</span></summary><div class="ml-tree-body"><input class="ml-subr" type="radio" name="subg-Asset" id="sub-Asset-__base__" checked><input class="ml-subr" type="radio" name="subg-Asset" id="sub-Asset-car"><input class="ml-subr" type="radio" name="subg-Asset" id="sub-Asset-bicycle"><div class="ml-subtype-bar"><span class="ml-subtype-bar-label">View subtype:</span><label class="ml-subtype-opt" for="sub-Asset-__base__">Base (all)</label><label class="ml-subtype-opt" for="sub-Asset-car">car</label><label class="ml-subtype-opt" for="sub-Asset-bicycle">bicycle</label></div><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr-section">Identity</div><div class="ml-attr" id="attr-Asset-entityType" data-name="entityType" data-entitytype="1"><div class="ml-attr-head"><span class="ml-attr-name">entityType<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-sivi" title="SIVI reference">object.entityType</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Kind of object.</span> <code class="ml-attr-ex" title="example">car</code></div></div><div class="ml-attr-section">Details</div><div class="ml-attr" id="attr-Asset-make" data-subs="car" data-name="make"><div class="ml-attr-head"><span class="ml-attr-name">make<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-sivi" title="SIVI reference">object.make</span><span class="ml-attr-subs"><span class="ml-subtype-tag">car</span></span></div><div class="ml-attr-body"><span class="ml-attr-desc">Brand.</span> <code class="ml-attr-ex" title="example">Volvo</code></div></div><div class="ml-attr" id="attr-Asset-frameSize" data-subs="bicycle" data-name="frameSize"><div class="ml-attr-head"><span class="ml-attr-name">frameSize</span><span class="ml-attr-type">integer</span><span class="ml-attr-sivi" title="SIVI reference">object.frameSize</span><span class="ml-attr-subs"><span class="ml-subtype-tag">bicycle</span></span></div><div class="ml-attr-body"><span class="ml-attr-desc">Frame size in cm.</span> <code class="ml-attr-ex" title="example">54</code></div></div></div></div></div></details><details class="ml-tree-node" id="Error" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">Error</span><span class="ml-ent-count" title="attribute count">3</span><span class="ml-ent-desc">Problem details.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-Error-code" data-name="code"><div class="ml-attr-head"><span class="ml-attr-name">code<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">E42</code></div></div><div class="ml-attr" id="attr-Error-message" data-name="message"><div class="ml-attr-head"><span class="ml-attr-name">message<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span></div></div><div class="ml-attr" id="attr-Error-details" data-name="details"><div class="ml-attr-head"><span class="ml-attr-name">details</span><span class="ml-attr-type">string[]</span></div></div></div></div></div></details><details class="ml-tree-node" id="Fee" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">Fee</span><span class="ml-ent-count" title="attribute count">3</span></summary><div class="ml-tree-body"><input class="ml-subr" type="radio" name="subg-Fee" id="sub-Fee-__base__" checked><input class="ml-subr" type="radio" name="subg-Fee" id="sub-Fee-shipping"><input class="ml-subr" type="radio" name="subg-Fee" id="sub-Fee-service"><div class="ml-subtype-bar"><span class="ml-subtype-bar-label">View subtype:</span><label class="ml-subtype-opt" for="sub-Fee-__base__">Base (all)</label><label class="ml-subtype-opt" for="sub-Fee-shipping">shipping</label><label class="ml-subtype-opt" for="sub-Fee-service">service</label></div><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-Fee-entityType" data-name="entityType" data-entitytype="1"><div class="ml-attr-head"><span class="ml-attr-name">entityType</span><span class="ml-attr-type">string</span></div></div><div class="ml-attr" id="attr-Fee-amount" data-name="amount"><div class="ml-attr-head"><span class="ml-attr-name">amount<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">number</span></div><div class="ml-attr-body"><code class="ml-attr-ex" title="example">4.95</code></div></div><div class="ml-attr" id="attr-Fee-carrier" data-subs="shipping" data-name="carrier"><div class="ml-attr-head"><span class="ml-attr-name">carrier</span><span class="ml-attr-type">string</span><span class="ml-attr-subs"><span class="ml-subtype-tag">shipping</span></span></div></div></div></div></div></details><details class="ml-tree-node" id="FeeBase" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">FeeBase</span><span class="ml-ent-count" title="attribute count">1</span><span class="ml-ent-desc">Takes the name the shared base of Fee would get.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-FeeBase-x" data-name="x"><div class="ml-attr-head"><span class="ml-attr-name">x</span><span class="ml-attr-type">string</span></div></div></div></div></div></details><details class="ml-tree-node" id="Party" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">Party</span><span class="ml-ent-count" title="attribute count">6</span><span class="ml-ent-sivi-count" title="SIVI references">6 SIVI</span><span class="ml-ent-desc">Someone involved in an order.</span></summary><div class="ml-tree-body"><input class="ml-subr" type="radio" name="subg-Party" id="sub-Party-__base__" checked><input class="ml-subr" type="radio" name="subg-Party" id="sub-Party-privatePerson"><input class="ml-subr" type="radio" name="subg-Party" id="sub-Party-company"><div class="ml-subtype-bar"><span class="ml-subtype-bar-label">View subtype:</span><label class="ml-subtype-opt" for="sub-Party-__base__">Base (all)</label><label class="ml-subtype-opt" for="sub-Party-privatePerson">privatePerson</label><label class="ml-subtype-opt" for="sub-Party-company">company</label></div><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-Party-entityType" data-name="entityType" data-entitytype="1"><div class="ml-attr-head"><span class="ml-attr-name">entityType<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-sivi" title="SIVI reference">party.entityType</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Identifies the kind of party.</span> <code class="ml-attr-ex" title="example">privatePerson</code></div></div><div class="ml-attr" id="attr-Party-name" data-name="name"><div class="ml-attr-head"><span class="ml-attr-name">name<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-constraint" title="maxLength">maxLength 100</span><span class="ml-attr-sivi" title="SIVI reference">party.name</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Full name.</span> <code class="ml-attr-ex" title="example">Ada</code></div></div><div class="ml-attr" id="attr-Party-email" data-name="email"><div class="ml-attr-head"><span class="ml-attr-name">email</span><span class="ml-attr-type">string<span class="ml-attr-fmt">&middot;email</span></span><span class="ml-attr-sivi" title="SIVI reference">party.email</span></div><div class="ml-attr-body"><span class="ml-attr-desc">Contact address.</span> <code class="ml-attr-ex" title="example">ada@example.com</code></div></div><div class="ml-attr" id="attr-Party-birthDate" data-subs="privatePerson" data-name="birthDate"><div class="ml-attr-head"><span class="ml-attr-name">birthDate</span><span class="ml-attr-type">Date</span><span class="ml-attr-sivi" title="SIVI reference">party.birthDate</span><span class="ml-attr-subs"><span class="ml-subtype-tag">privatePerson</span></span></div><div class="ml-attr-body"><span class="ml-attr-desc">Date of birth.</span> <code class="ml-attr-ex" title="example">1990-12-10</code></div></div><div class="ml-attr" id="attr-Party-registrationNumber" data-subs="company" data-name="registrationNumber"><div class="ml-attr-head"><span class="ml-attr-name">registrationNumber<span class="ml-req-mark" title="required">*</span></span><span class="ml-attr-type">string</span><span class="ml-attr-pattern" title="pattern: ^\d{8}$">^\d{8}$</span><span class="ml-attr-sivi" title="SIVI reference">party.registrationNumber</span><span class="ml-attr-subs"><span class="ml-subtype-tag">company</span></span></div><div class="ml-attr-body"><span class="ml-attr-desc">Chamber of commerce number.</span> <code class="ml-attr-ex" title="example">12345678</code></div></div><div class="ml-attr" id="attr-Party-payment" data-subs="company privatePerson" data-name="payment"><div class="ml-attr-head"><span class="ml-attr-name">payment</span><a class="ml-attr-type ml-link" href="#cl-PAY003">PAY003</a><span class="ml-attr-sivi" title="SIVI reference">party.payment</span><span class="ml-attr-cl" title="SIVI codelist">PAY003</span><span class="ml-attr-subs"><span class="ml-subtype-tag">company</span><span class="ml-subtype-tag">privatePerson</span></span></div><div class="ml-attr-body"><span class="ml-attr-desc">Codelist: PAY003. Payment method.</span></div></div></div></div><div class="ml-children"><div class="ml-tree-ref" data-depth="1" data-ref-to="Address"><span class="ml-tree-leader" aria-hidden="true">&#8627;</span><a class="ml-ref-name ml-link" href="#Address">Address</a> <span class="ml-ref-where">defined under <a href="#Order">Order</a></span><span class="ml-card-badge" title="cardinality">*</span></div></div></div></details><details class="ml-tree-node" id="Zeta" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">Zeta</span><span class="ml-ent-desc">Not reachable from any root.</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><p class="ml-empty">No attributes defined.</p></div></div></details><details class="ml-tree-node" id="alpha" data-depth="0" open><summary class="ml-tree-summary"><span class="ml-tree-chevron" aria-hidden="true"></span><span class="ml-ent-name">alpha</span><span class="ml-ent-count" title="attribute count">1</span></summary><div class="ml-tree-body"><div class="ml-entity-card"><div class="ml-attrs"><div class="ml-attr" id="attr-alpha-note" data-name="note"><div class="ml-attr-head"><span class="ml-attr-name">note</span><span class="ml-attr-type">string</span></div></div></div></div></div></details></div></section><section class="ml-section" id="sec-enums" data-tab="enums"><h2>Enums</h2><details class="ml-enum" id="enum-Channel"><summary><span class="ml-enum-name">Channel</span><span class="ml-enum-desc">Sales channel.</span></summary><table class="ml-enum-table"><thead><tr><th>Name</th><th>Value</th><th>Label</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-ev-name">Web</span></td><td><code>web</code></td><td>Web shop</td><td>Orders placed online.</td></tr><tr><td><span class="ml-ev-name"></span></td><td><code>store</code></td><td>In store</td><td></td></tr><tr><td><span class="ml-ev-name"></span></td><td><code>phone_order</code></td><td></td><td></td></tr></tbody></table></details><details class="ml-enum" id="enum-DocumentKind"><summary><span class="ml-enum-name">DocumentKind</span><span class="ml-enum-desc">Kind of document.</span></summary><table class="ml-enum-table"><thead><tr><th>Name</th><th>Value</th><th>Label</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-ev-name"></span></td><td><code>invoice</code></td><td></td><td></td></tr><tr><td><span class="ml-ev-name"></span></td><td><code>receipt</code></td><td></td><td></td></tr></tbody></table></details><details class="ml-enum" id="enum-Legacy"><summary><span class="ml-enum-name">Legacy</span><span class="ml-enum-desc">Not referenced anywhere.</span></summary><table class="ml-enum-table"><thead><tr><th>Name</th><th>Value</th><th>Label</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-ev-name"></span></td><td><code>old</code></td><td></td><td></td></tr></tbody></table></details><details class="ml-enum" id="enum-Size"><summary><span class="ml-enum-name">Size</span><span class="ml-enum-desc">Garment size.</span></summary><table class="ml-enum-table"><thead><tr><th>Name</th><th>Value</th><th>Label</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-ev-name"></span></td><td><code>S</code></td><td></td><td></td></tr><tr><td><span class="ml-ev-name"></span></td><td><code>M</code></td><td></td><td>Medium</td></tr><tr><td><span class="ml-ev-name"></span></td><td><code>x-large</code></td><td>élan</td><td></td></tr></tbody></table></details><details class="ml-enum" id="enum-SortOrder"><summary><span class="ml-enum-name">SortOrder</span></summary><table class="ml-enum-table"><thead><tr><th>Name</th><th>Value</th><th>Label</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-ev-name">Asc</span></td><td><code>asc</code></td><td></td><td></td></tr><tr><td><span class="ml-ev-name">Desc</span></td><td><code>desc</code></td><td></td><td></td></tr></tbody></table></details></section><section class="ml-section" id="sec-codelists" data-tab="codelists"><h2>Codelists</h2><details class="ml-codelist" id="cl-Colour"><summary><span class="ml-cl-name">Colour</span><span class="ml-subtype-tag">CLR001</span><span class="ml-cl-desc">Colours &middot; 5 codes</span></summary><table class="ml-cl-table"><thead><tr><th>Code</th><th>Description</th><th>Note</th></tr></thead><tbody><tr><td><span class="ml-cl-code">01</span></td><td>Red</td><td></td></tr><tr><td><span class="ml-cl-code">02</span></td><td>Green</td><td>Discontinued</td></tr><tr><td><span class="ml-cl-code">10</span></td><td>Blue &amp; white</td><td>Seasonal &lt;limited&gt; &amp; rare</td></tr><tr><td><span class="ml-cl-code">9</span></td><td>Black</td><td></td></tr><tr><td><span class="ml-cl-code">A</span></td><td>Any</td><td></td></tr></tbody></table></details><details class="ml-codelist" id="cl-EMPTY4"><summary><span class="ml-cl-name">EMPTY4</span><span class="ml-subtype-tag">EMPTY4</span><span class="ml-cl-desc">No codes yet &middot; 0 codes</span></summary><p class="ml-empty" style="padding:12px 16px;">No codes available.</p></details><details class="ml-codelist" id="cl-OrderLineChannelSubset"><summary><span class="ml-cl-name">OrderLineChannelSubset</span><span class="ml-cl-desc">1 codes</span></summary><table class="ml-cl-table"><thead><tr><th>Code</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-cl-code">web</span></td><td></td></tr></tbody></table></details><details class="ml-codelist" id="cl-OrderStatus"><summary><span class="ml-cl-name">OrderStatus</span><span class="ml-subtype-tag">STA002</span><span class="ml-cl-desc">Order status &middot; 2 codes</span></summary><table class="ml-cl-table"><thead><tr><th>Code</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-cl-code">01</span></td><td>Open</td></tr><tr><td><span class="ml-cl-code">10</span></td><td>Shipped</td></tr></tbody></table></details><details class="ml-codelist" id="cl-PAY003"><summary><span class="ml-cl-name">PAY003</span><span class="ml-subtype-tag">PAY003</span><span class="ml-cl-desc">2 codes</span></summary><table class="ml-cl-table"><thead><tr><th>Code</th><th>Description</th></tr></thead><tbody><tr><td><span class="ml-cl-code">card</span></td><td></td></tr><tr><td><span class="ml-cl-code">cash</span></td><td>Cash</td></tr></tbody></table></details></section></div>
+    </main>
+</div>
+<script>(function () {
+    "use strict";
+
+    var wrap = document.querySelector(".ml-search-wrap");
+    var input = document.getElementById("ml-search");
+    var toc = document.getElementById("ml-toc");
+    if (!wrap || !input || !toc) {
+        return;
+    }
+
+    wrap.hidden = false;
+
+    var links = Array.prototype.slice.call(toc.querySelectorAll("a[data-toc]"));
+    var entries = links.map(function (a) {
+        return { a: a, li: a.closest("li") || a.parentElement, text: (a.textContent || "").toLowerCase() };
+    });
+
+    function openAncestors(el) {
+        var d = el.closest("details");
+        while (d) {
+            d.open = true;
+            d = d.parentElement ? d.parentElement.closest("details") : null;
+        }
+    }
+
+    function apply() {
+        var q = input.value.trim().toLowerCase();
+        if (!q) {
+            entries.forEach(function (e) {
+                if (e.li) { e.li.classList.remove("ml-hidden"); }
+            });
+            return;
+        }
+        entries.forEach(function (e) {
+            var hit = e.text.indexOf(q) !== -1;
+            if (e.li) { e.li.classList.toggle("ml-hidden", !hit); }
+            if (hit) { openAncestors(e.a); }
+        });
+    }
+
+    var t;
+    input.addEventListener("input", function () {
+        clearTimeout(t);
+        t = setTimeout(apply, 80);
+    });
+    input.addEventListener("search", apply);
+})();
+</script>
+</body>
+</html>

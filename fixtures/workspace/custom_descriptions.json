@@ -1,0 +1,12 @@
+{
+  "subtypes": {
+    "party.company": "A registered company (workspace text).",
+    "asset.bicycle": ""
+  },
+  "codeNotes": {
+    "CLR001": {
+      "02": "Discontinued",
+      "10": "Seasonal <limited> & rare"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "Name": "STA002",
+  "Description": "Order status",
+  "Code": [
+    { "CodeValue": "01", "Description": "Open" },
+    { "CodeValue": "10", "Description": "Shipped" },
+    { "CodeValue": "99", "Description": "Cancelled" }
+  ]
+}

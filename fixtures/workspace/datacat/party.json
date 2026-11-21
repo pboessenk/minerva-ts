@@ -1,0 +1,31 @@
+{
+  "Name": "party",
+  "Description": "A person or organisation.",
+  "EntityType": [
+    {
+      "Name": "default",
+      "Description": "Any party.",
+      "Attribute": [
+        { "Name": "entityType", "Description": "party.default. Identifies the kind of party.", "Datatype": "AN" },
+        { "Name": "name", "Description": "party.default. Full name.", "Datatype": "AN" },
+        { "Name": "email", "Description": "Email address, without prefix.", "Datatype": "AN" },
+        { "Name": "payment", "Description": "party.default. Payment method.", "Datatype": "AN", "Codelist": "PAY003" }
+      ]
+    },
+    {
+      "Name": "privatePerson",
+      "Description": "A natural person.",
+      "Attribute": [
+        { "Name": "birthDate", "Description": "party.privatePerson. Date of birth.", "Datatype": "DA" },
+        { "Name": "name", "Description": "party.privatePerson. A second description, never used.", "Datatype": "AN" }
+      ]
+    },
+    {
+      "Name": "company",
+      "Description": "A company (catalogue text).",
+      "Attribute": [
+        { "Name": "registrationNumber", "Description": "PARTY.COMPANY. Chamber of commerce number.", "Datatype": "AN", "AFD1": "KVKNR" }
+      ]
+    }
+  ]
+}
