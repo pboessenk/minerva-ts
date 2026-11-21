@@ -12,6 +12,7 @@
     "build": "node packages/web/build-dist.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "pnpm --filter @minerva/e2e test",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json",
     "golden:update": "node packages/server/test/update-golden.ts",
     "sivi:update": "node packages/sivi-updater/src/cli.ts",

@@ -1,0 +1,16 @@
+{
+  "name": "@minerva/e2e",
+  "version": "0.0.0",
+  "license": "MIT",
+  "private": true,
+  "description": "Browser tests of the editor against the server, on a copy of the fixture workspace.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@minerva/server": "workspace:*",
+    "@minerva/web": "workspace:*",
+    "@playwright/test": "1.65.0"
+  }
+}

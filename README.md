@@ -130,6 +130,7 @@ every export.
 | `packages/server` | The HTTP server: serves the editor and the data directory, saves, exports. |
 | `packages/web` | The editor (browser), bundled with esbuild together with its graph libraries; nothing is loaded from a CDN. |
 | `packages/sivi-updater` | Downloads the SIVI catalogue, reports what changed and what that means for your models. |
+| `packages/e2e` | Browser tests of the editor (Playwright), each against its own server and a copy of the example workspace. |
 | `fixtures/` | The example workspace, its snapshot exports, and reference vectors. |
 
 [docs/architecture.md](docs/architecture.md) explains how the parts fit
@@ -141,8 +142,14 @@ together.
 pnpm lint             # formatting and lint rules (Biome); `pnpm format` fixes formatting
 pnpm check            # type-check and run all tests
 pnpm build            # minified editor in packages/web/dist, for `pnpm serve --prebuilt`
+pnpm test:e2e         # browser tests of the editor (Playwright)
 pnpm golden:update    # after an intended change to export output: rewrite fixtures/golden, then review the diff
 ```
+
+The browser tests need Playwright's Chromium once:
+`pnpm --filter @minerva/e2e exec playwright install chromium`. A failed test
+leaves a trace in `packages/e2e/test-results`; open it with
+`pnpm --filter @minerva/e2e exec playwright show-trace <path to trace.zip>`.
 
 [docs/architecture.md](docs/architecture.md) is the place to start if you
 continue development in a fork.
