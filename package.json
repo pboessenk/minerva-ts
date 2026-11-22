@@ -9,6 +9,7 @@
   },
   "scripts": {
     "serve": "node packages/server/src/cli.ts",
+    "new-model": "node packages/server/src/new-model.ts",
     "build": "node packages/web/build-dist.ts",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -74,8 +74,13 @@ You need Node.js 22.18 or later and pnpm 10.
 ```sh
 pnpm install
 pnpm sivi:update --data ./data --apply --version "<catalogue label>"   # fetch the SIVI catalogue
+pnpm new-model orders --data ./data                                    # start an empty model
 pnpm serve --data ./data                                               # open http://localhost:56043
 ```
+
+`new-model` writes `orders_model.json` and, when `minerva.json` lists the
+models, adds it there. The catalogue is optional: without it the editor works
+the same, but has no SIVI references or codelists to offer.
 
 To look around without fetching anything, serve the example workspace in
 `fixtures/workspace/`. It holds two models, a small invented catalogue and a

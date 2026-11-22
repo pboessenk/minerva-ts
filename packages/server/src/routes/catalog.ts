@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { type CustomDescriptions, decodeCustomDescriptions } from '@minerva/core';
 import { type JsonRecord, type JsonValue, encodeJson, omitEmpty } from '../http/encode-json.ts';
 import { type HttpResponse, json, methodNotAllowed, textError } from '../http/response.ts';
@@ -8,10 +10,19 @@ function omitEmptyList<T>(list: T[]): T[] | undefined {
   return list.length === 0 ? undefined : list;
 }
 
+/**
+ * Whether the catalogue folder `name` is absent: the catalogue was never
+ * fetched, so the editor gets an empty one. A folder that exists but cannot
+ * be read is still an error.
+ */
+function notFetched(workspace: Workspace, name: string): boolean {
+  return !existsSync(join(workspace.dataDir, name));
+}
+
 /** GET /api/codelists: every codelist, in the catalogue's on-disk shape. */
 export function codelists(workspace: Workspace, method: string): HttpResponse {
   if (method !== 'GET') return methodNotAllowed();
-  const items = workspace.catalog.codelists;
+  const items = workspace.catalog.codelists ?? (notFetched(workspace, 'codelists') ? [] : null);
   if (items === null) return textError(500, 'Codelists not loaded');
   const body: JsonRecord = {
     Items: items.map((item) => ({
@@ -26,7 +37,7 @@ export function codelists(workspace: Workspace, method: string): HttpResponse {
 /** GET /api/datacat: the data catalogue, in its on-disk shape. */
 export function datacat(workspace: Workspace, method: string): HttpResponse {
   if (method !== 'GET') return methodNotAllowed();
-  const entities = workspace.catalog.entities;
+  const entities = workspace.catalog.entities ?? (notFetched(workspace, 'datacat') ? [] : null);
   if (entities === null) return textError(500, 'Datacat not loaded');
   const body: JsonRecord = {
     Entity: entities.map((entity) => ({
