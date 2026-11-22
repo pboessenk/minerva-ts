@@ -10,6 +10,7 @@ import { setDirty } from '../base/model-state.ts';
 import { refreshGraph } from '../editor/graph.ts';
 import { buildApiSidebar } from '../editor/sidebar.ts';
 import { deriveAllChildren, state } from '../editor/state.ts';
+import { renderEntityDetail } from './entity-render.ts';
 
 /**
  * Update an attribute field in both the raw JSON model and runtime model.
@@ -111,10 +112,18 @@ export function updateAttribute(entityName: string, attrName: string, field: str
 }
 
 /**
- * Toggle the required field for an attribute.
+ * Toggle the required field for an attribute. For an attribute typed with
+ * another entity, that sets the child's cardinality (`0..1` or `1`, `*` or
+ * `1..*`), so the children are derived again and the view redrawn.
  */
 export function toggleRequired(entityName: string, attrName: string, isRequired: boolean): void {
-  if (updateAttribute(entityName, attrName, 'required', isRequired)) {
-    setDirty(true);
+  if (!updateAttribute(entityName, attrName, 'required', isRequired)) return;
+  setDirty(true);
+  const attr = state.apiModel?.[entityName]?.attrs.find((a) => a.name === attrName);
+  const baseType = (attr?.type ?? '').replace(/\[\]$/, '');
+  if (baseType !== entityName && state.apiModel?.[baseType] !== undefined) {
+    deriveAllChildren();
+    refreshGraph();
+    renderEntityDetail(entityName);
   }
 }

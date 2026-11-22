@@ -227,7 +227,12 @@ export function makeParamInEditable(td: HTMLElement): void {
   td.appendChild(sel);
   sel.focus();
 
+  // Runs once: the change saves and redraws, which removes the select and
+  // fires its blur.
+  let done = false;
   const save = () => {
+    if (done) return;
+    done = true;
     param.in = sel.value;
     setDirty(true);
     renderApiOperation(opId);

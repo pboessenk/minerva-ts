@@ -3,6 +3,7 @@ import type { ExampleBody, JsonObject, TypeMap } from '../types.ts';
 import type { ApiOperation } from '../../editor/model-types.ts';
 import { collectFormValues } from './collect.ts';
 import { reconcileExampleData } from './reconcile.ts';
+import { FORM_MAX_DEPTH } from './type-info.ts';
 import { getEntities, getOps, getExamples } from '../model-access.ts';
 import { downloadTextFile, showToast } from '../../base/ui.ts';
 
@@ -160,6 +161,7 @@ function prepareBodyImport(entityName: string, isArray: boolean, rawText: string
         return;
       }
       computeDroppedPaths(itemOrig, c, '[' + i + ']', dropped);
+      noteUntypedSubtypes(entityName, c, '[' + i + ']', notes, 0);
       cleaned.push(c);
     });
     if (sawTypeMap) notes.push('A _typeMap key was found in the pasted JSON — used for type checks, then removed.');
@@ -178,7 +180,55 @@ function prepareBodyImport(entityName: string, isArray: boolean, rawText: string
   const orig = stripTypeMap(parsed) as JsonObject;
   const cleaned = reconcileExampleData(entityName, parsed, tm, 0) || {};
   computeDroppedPaths(orig, cleaned, '', dropped);
+  noteUntypedSubtypes(entityName, cleaned, '', notes, 0);
   return { ok: true, cleaned, dropped, notes, matchedCount: Object.keys(cleaned).length, totalCount: Object.keys(orig).length, entityName };
+}
+
+/**
+ * The form shows the fields of an entity with subtypes only once its
+ * entityType is chosen, and keeps only the fields it shows. An imported
+ * object of such an entity without a valid entityType keeps its values, but
+ * they are lost on save unless a subtype is picked first: say so.
+ */
+function noteUntypedSubtypes(entityName: string, obj: JsonObject, prefix: string, notes: string[], depth: number): void {
+  if (depth >= FORM_MAX_DEPTH) return;
+  const entities = getEntities() || {};
+  const entity = entities[entityName];
+  if (!entity) return;
+  const subtypesOf = (name: string): string[] | null => {
+    const et = entities[name]?.attrs.find((a) => a.name === 'entityType' && a.allowedValues && a.allowedValues.length > 0);
+    return et ? (et.allowedValues as string[]) : null;
+  };
+  const check = (childName: string, value: unknown, path: string): void => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    const o = value as JsonObject;
+    const subtypes = subtypesOf(childName);
+    if (subtypes && !(typeof o.entityType === 'string' && subtypes.includes(o.entityType))) {
+      notes.push(
+        `${path || entityName} has no entityType (${subtypes.join(', ')}): pick one in the form, or its fields are not kept when you save.`,
+      );
+      return;
+    }
+    noteUntypedSubtypes(childName, o, path, notes, depth + 1);
+  };
+  if (depth === 0) {
+    const subtypes = subtypesOf(entityName);
+    if (subtypes && !(typeof obj.entityType === 'string' && subtypes.includes(obj.entityType))) {
+      notes.push(
+        `${prefix || entityName} has no entityType (${subtypes.join(', ')}): pick one in the form, or its fields are not kept when you save.`,
+      );
+    }
+  }
+  for (const attr of entity.attrs) {
+    if (attr.type === '_section' || !(attr.name in obj)) continue;
+    const isArray = attr.type.endsWith('[]');
+    const base = isArray ? attr.type.slice(0, -2) : attr.type;
+    if (!entities[base] || base === entityName) continue;
+    const path = prefix ? prefix + '.' + attr.name : attr.name;
+    const value = obj[attr.name];
+    if (isArray && Array.isArray(value)) value.forEach((v, i) => check(base, v, path + '[' + i + ']'));
+    else check(base, value, path);
+  }
 }
 
 /** Extract a plain-object _typeMap from a payload, or null. */

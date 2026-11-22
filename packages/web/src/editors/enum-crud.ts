@@ -81,11 +81,39 @@ export function createEnum(): void {
  * Delete an enum.
  */
 export function deleteEnum(enumName: string): void {
-  if (!confirm(`Delete enum "${enumName}"?`)) return;
+  // Attributes typed with the enum become plain strings: that is what an
+  // enum value is on the wire. Their allowed values were a subset of the
+  // enum's values, so they go too.
+  const usedBy: string[] = [];
+  for (const [entityName, rtEnt] of Object.entries(state.apiModel!)) {
+    for (const a of rtEnt.attrs || []) {
+      if (a.type === enumName || a.type === enumName + '[]') usedBy.push(`${entityName}.${a.name}`);
+    }
+  }
+  let msg = `Delete enum "${enumName}"?`;
+  if (usedBy.length > 0) {
+    msg += `\n\nAttributes typed ${enumName}: ${usedBy.join(', ')}.\nThey become string attributes, without allowed values.`;
+  }
+  if (!confirm(msg)) return;
 
   const model = getRawModel()!;
   delete model.enums![enumName];
   delete state.apiEnums![enumName];
+
+  const retype = (a: { type: string; allowedValues?: string[] | null; allowedName?: string | null }): void => {
+    if (a.type !== enumName && a.type !== enumName + '[]') return;
+    a.type = a.type.endsWith('[]') ? 'string[]' : 'string';
+    a.allowedValues = null;
+    a.allowedName = null;
+  };
+  for (const rawEnt of Object.values(model.entities || {})) {
+    for (const section of rawEnt.sections || []) {
+      for (const a of section.attributes || []) retype(a);
+    }
+  }
+  for (const rtEnt of Object.values(state.apiModel!)) {
+    for (const a of rtEnt.attrs || []) retype(a);
+  }
 
   setDirty(true);
   buildApiSidebar();

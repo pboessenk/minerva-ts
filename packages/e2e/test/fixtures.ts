@@ -4,16 +4,17 @@
  * uncaught error or console error. Tests never share state, so they can run
  * in parallel and in any order.
  */
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from '@minerva/server';
 import { type Locator, type Page, test as base, expect } from '@playwright/test';
 
 export { expect };
+export type { Locator, Page };
 
 export const FIXTURE_WORKSPACE = fileURLToPath(new URL('../../../fixtures/workspace', import.meta.url));
 export const GOLDEN_DIR = fileURLToPath(new URL('../../../fixtures/golden', import.meta.url));
@@ -71,15 +72,18 @@ export class Editor {
     await expect(this.attributeRows(name).first()).toBeVisible();
   }
 
+  /** The row of one attribute in the attribute table. */
+  attributeRow(entity: string, attr: string): Locator {
+    return this.page.locator(`tr[data-entity=${JSON.stringify(entity)}][data-attr=${JSON.stringify(attr)}]`);
+  }
+
   attributeRows(entity: string): Locator {
     return this.page.locator(`tr[data-entity=${JSON.stringify(entity)}][data-attr]`);
   }
 
   /** A cell of the attribute table: `field` is name, type, format, constraints, sivi, codelist, allowed, description, example or notes. */
   attributeCell(entity: string, attr: string, field: string): Locator {
-    return this.page.locator(
-      `tr[data-entity=${JSON.stringify(entity)}][data-attr=${JSON.stringify(attr)}] td[data-field=${JSON.stringify(field)}]`,
-    );
+    return this.attributeRow(entity, attr).locator(`td[data-field=${JSON.stringify(field)}]`);
   }
 
   toast(): Locator {
@@ -94,19 +98,38 @@ export class Editor {
 }
 
 interface Fixtures {
-  /** Console errors a test expects; any other console error fails it. */
-  allowedConsoleErrors: RegExp[];
+  /**
+   * Console errors a test expects, as one pattern (join alternatives with
+   * `|`); any other console error fails the test. One pattern rather than a
+   * list, because Playwright reads a two-element option array as a
+   * `[value, options]` pair.
+   */
+  allowedConsoleErrors: RegExp | null;
+  /**
+   * Files to add to (or replace in) the workspace copy before the server
+   * starts, by path relative to the data directory. The model list is read
+   * at start, so a new model must be added here, together with its entry in
+   * `minerva.json`. The data directory sits in a temporary folder of its
+   * own, so `../contracts/x.json` is a contract next to it, where a model's
+   * `compareSources` paths point.
+   */
+  workspaceFiles: Record<string, string>;
   workspace: Workspace;
   editor: Editor;
 }
 
 export const test = base.extend<Fixtures>({
-  allowedConsoleErrors: [[], { option: true }],
+  allowedConsoleErrors: [null, { option: true }],
+  workspaceFiles: [{}, { option: true }],
 
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright fixtures must destructure their first argument.
-  workspace: async ({}, use) => {
-    const dir = mkdtempSync(join(tmpdir(), 'minerva-e2e-'));
+  workspace: async ({ workspaceFiles }, use) => {
+    const root = mkdtempSync(join(tmpdir(), 'minerva-e2e-'));
+    const dir = join(root, 'data');
     cpSync(FIXTURE_WORKSPACE, dir, { recursive: true });
+    for (const [file, content] of Object.entries(workspaceFiles)) {
+      mkdirSync(dirname(join(dir, file)), { recursive: true });
+      writeFileSync(join(dir, file), content);
+    }
     const app = createApp({ dataDir: dir, prebuiltEditor: true, now: () => NOW });
     const server = createServer(app.handle);
     await new Promise<void>((resolve) => server.listen(0, 'localhost', resolve));
@@ -115,7 +138,7 @@ export const test = base.extend<Fixtures>({
     await use({ dir, url: `http://localhost:${port}/`, read, readModel: (file) => JSON.parse(read(file)) as ModelFile });
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
   },
 
   page: async ({ page, allowedConsoleErrors }, use) => {
@@ -124,7 +147,7 @@ export const test = base.extend<Fixtures>({
     page.on('console', (msg) => {
       if (msg.type() !== 'error') return;
       const text = msg.text();
-      if (!allowedConsoleErrors.some((re) => re.test(text))) errors.push(`console: ${text}`);
+      if (allowedConsoleErrors?.test(text) !== true) errors.push(`console: ${text}`);
     });
     await use(page);
     expect(errors, 'errors in the page').toEqual([]);

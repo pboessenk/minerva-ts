@@ -55,6 +55,10 @@ export function _syncAttrsToRawSections(entityName: string): void {
     }
   }
 
+  // The leading unnamed section holds the attributes above the first group;
+  // when there are none, it is left out rather than saved empty.
+  if (newSections.length > 1 && newSections[0]!.attributes!.length === 0) newSections.shift();
+
   entity.sections = newSections;
 }
 

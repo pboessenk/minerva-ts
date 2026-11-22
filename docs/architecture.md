@@ -30,7 +30,9 @@ built from the file shapes, and reaches the server only over HTTP.
 The next step in that direction would be to move the edits themselves
 (rename, add an attribute, sync subtypes, prune constraints) into `core` as
 functions that take a model and return a new one, with unit tests, leaving
-the editor as the view on top. It needs browser tests of the editor first.
+the editor as the view on top. The browser tests in `packages/e2e` cover the
+editor's flows end to end (what it shows, what it saves, what it exports), so
+such a move can be checked against them.
 
 ## core
 

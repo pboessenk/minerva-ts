@@ -123,7 +123,12 @@ function makeTypeDropdown(cell: HTMLElement, entityName: string, attrName: strin
   const select = cell.querySelector('select')!;
   select.focus();
 
+  // Runs once: the change saves and redraws the table, which removes the
+  // select and fires its blur.
+  let done = false;
   const save = () => {
+    if (done) return;
+    done = true;
     const newValue = select.value;
     if (newValue !== currentValue) {
       if (updateAttribute(entityName, attrName, 'type', newValue)) {
@@ -188,7 +193,12 @@ function makeFormatDropdown(cell: HTMLElement, entityName: string, attrName: str
   const select = cell.querySelector('select')!;
   select.focus();
 
+  // Runs once: the change saves and redraws the table, which removes the
+  // select and fires its blur.
+  let done = false;
   const save = () => {
+    if (done) return;
+    done = true;
     const newValue = select.value;
     if (newValue !== currentValue) {
       if (updateAttribute(entityName, attrName, 'format', newValue || null)) {

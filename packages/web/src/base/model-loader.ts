@@ -64,8 +64,13 @@ export async function loadCodelistData(): Promise<void> {
   try {
     const resp = await fetch('/api/codelists');
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const json = (await resp.json()) as { Items?: Codelist[] };
-    const items = json.Items || [];
+    // The server leaves out an empty description; the views expect a string.
+    const json = (await resp.json()) as { Items?: (Omit<Codelist, 'Description'> & { Description?: string | null })[] };
+    const items: Codelist[] = (json.Items || []).map((cl) => ({
+      ...cl,
+      Description: cl.Description ?? '',
+      Code: cl.Code?.map((c) => ({ ...c, Description: c.Description ?? '' })),
+    }));
     codelistData = items;
     codelistMap = {};
     items.forEach((cl) => {

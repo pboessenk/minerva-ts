@@ -72,7 +72,7 @@ export async function makeCodelistPicker(cell: HTMLElement, entityName: string, 
         const codes = cl.Code || [];
         const preview = codes
           .slice(0, 3)
-          .map((c) => c.Value || c)
+          .map((c) => c.CodeValue || c.Value || '')
           .join(', ');
         const more = codes.length > 3 ? `, … (+${codes.length - 3})` : '';
         return `
@@ -97,7 +97,14 @@ export async function makeCodelistPicker(cell: HTMLElement, entityName: string, 
     });
   };
 
+  // Picking an item or pressing Enter saves at once; leaving the input saves
+  // 150 ms later (so a click on an item lands first); Escape cancels. Only
+  // the first of these counts: the others would save again, or save after a
+  // cancel, once the input is removed and fires its blur.
+  let done = false;
   const save = () => {
+    if (done) return;
+    done = true;
     const newValue = input.value.trim() || null;
     dropdown.remove();
     if (newValue !== currentValue) {
@@ -112,6 +119,8 @@ export async function makeCodelistPicker(cell: HTMLElement, entityName: string, 
   };
 
   const cancel = () => {
+    if (done) return;
+    done = true;
     dropdown.remove();
     cell.innerHTML = originalHtml;
   };

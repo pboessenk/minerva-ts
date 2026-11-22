@@ -749,6 +749,18 @@ export function buildApiSidebar(): void {
     if (!sidebarState.iconStripBuilt) buildIconStrip();
     refreshIconStrip();
   }
+
+  // A rebuild (after an edit, or once a model has loaded) keeps the filter typed in the search box.
+  applyApiSidebarFilter();
+}
+
+/** Show only the sidebar entries whose name contains the text of the search box. */
+export function applyApiSidebarFilter(): void {
+  const q = ((document.getElementById('search') as HTMLInputElement | null)?.value ?? '').toLowerCase();
+  document.querySelectorAll<HTMLElement>('.ca-entity-btn').forEach((btn) => {
+    const entity = btn.dataset.entity || '';
+    btn.style.display = entity.toLowerCase().includes(q) ? 'block' : 'none';
+  });
 }
 
 export function buildApiTree(): TreeItem[] {

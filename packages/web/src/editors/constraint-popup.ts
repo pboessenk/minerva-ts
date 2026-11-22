@@ -99,6 +99,20 @@ export function makeConstraintPopup(entityName: string, attrName: string): void 
   for (const k of ['minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'default'] as const) {
     if (inputs[k] && current[k as keyof AttrConstraints] != null) inputs[k].value = String(current[k as keyof AttrConstraints]);
   }
+  // A boolean default may be stored in any case and with spaces (" TRUE "),
+  // which the select has no option for: show it as true/false. A value that
+  // is neither gets an option of its own, so saving the popup keeps it
+  // rather than clearing it.
+  if (isBoolean && inputs['default'] instanceof HTMLSelectElement && current.default != null) {
+    const select = inputs['default'];
+    const raw = String(current.default);
+    const word = raw.trim().toLowerCase();
+    if (word === 'true' || word === 'false') {
+      select.value = word;
+    } else {
+      select.add(new Option(raw, raw, true, true));
+    }
+  }
   const seedBound = (inputKey: 'minimum' | 'maximum', exclKey: 'exclusiveMinimum' | 'exclusiveMaximum') => {
     if (!inputs[inputKey]) return;
     const v = current[inputKey] != null ? current[inputKey] : current[exclKey];

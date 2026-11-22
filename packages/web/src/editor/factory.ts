@@ -18,7 +18,7 @@
 import { showGeneralView } from './general.ts';
 import { showApiGraph } from './graph.ts';
 import type { ApiConfig } from './model-types.ts';
-import { buildApiSidebar } from './sidebar.ts';
+import { applyApiSidebarFilter, buildApiSidebar } from './sidebar.ts';
 import { loadApiModel, state } from './state.ts';
 import { renderEditorToolbar } from './toolbar.ts';
 import { renderEntityDetail } from '../editors/entity-render.ts';
@@ -115,11 +115,7 @@ export function createApiModule(id: string, cfg: ApiModuleConfig, hooks?: ApiMod
           if (h.afterDeactivate) h.afterDeactivate();
         },
         filter() {
-          const q = (document.getElementById('search') as HTMLInputElement).value.toLowerCase();
-          document.querySelectorAll<HTMLElement>('.ca-entity-btn').forEach((btn) => {
-            const entity = btn.dataset.entity || '';
-            btn.style.display = entity.toLowerCase().includes(q) ? 'block' : 'none';
-          });
+          applyApiSidebarFilter();
         },
       },
     ],
