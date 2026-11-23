@@ -69,7 +69,7 @@ exports OpenAPI 3.1, TypeSpec, TypeScript, CSV and a standalone HTML reference.
 
 ## Getting started
 
-You need Node.js 22.18 or later and pnpm 10.
+You need Node.js 22.18 or later and pnpm 12.15 or later.
 
 ```sh
 pnpm install
